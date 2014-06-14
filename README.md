@@ -1,4 +1,4 @@
 ezglib
 ==
 
-An easy Game Library for ClojureScript.
+An easy game library for ClojureScript.
