@@ -1,0 +1,10 @@
+{"version":3,
+ "file":"/Users/Calvin/lt/ezglib/examples/js/basic/core.js",
+ "sources":["core.cljs"],
+ "lineCount":14,
+ "mappings":
+ ";AAAA;;;;AAGA,AAAKA,mBAAM,AAACC,4BACA,iBAAA,NAAKC,MAAM,sBAAA,fAAQC;GACnB,iBAAA,AAAA,NAAKD;;AAEjB,AAAKE,gBAAG,2BAAA,IAAA,IAAA,UAAA,7CAACC;AAET,oDAAA,pDAACC,sCAAkBF,+DAAOJ;AAE1B,AAACO,+BAAgBH;AAEjB,8CAAA,iDAAA,/FAACI,gCAAiBJ",
+ "names":
+ ["basic.core/state", "ezglib.core/state", "game", "js/document",
+  "basic.core/gm", "ezglib.core/game", "ezglib.core/add-state!",
+  "ezglib.core/end-game", "ezglib.core/main-loop"]}
