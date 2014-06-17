@@ -1,11 +1,14 @@
 (ns example.examplea
-  (:require [ezglib.core :as ezg]))
+  (:require [ezglib.game :as game]
+            [ezglib.event :as event]
+            [ezglib.mode :as mode]
+            [ezglib.asset :as asset]))
 
-(def gm (ezg/game 600 400 "gameDiv" "game"))
+(def gm (game/game 600 400 "gameDiv" "game"))
 
-(def em (ezg/current-mode gm))
+(def em (mode/current-mode gm))
 
-(ezg/add-handler! em :click #(js/alert "Click."))
-(ezg/add-handler! em :key #(js/alert "Key."))
+(event/add-handler! em :click #(js/alert "Click."))
+(event/add-handler! em :key #(js/alert "Key."))
 
-(ezg/main-loop gm)
+(game/main-loop! gm)

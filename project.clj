@@ -1,4 +1,4 @@
-(defproject ezglib "0.1.2"
+(defproject ezglib "0.1.2-SNAPSHOT"
   :description "An easy game library for ClojureScript."
   :url "https://github.com/bakpakin/ezglib"
   :license {:name "Eclipse Public License"
@@ -6,8 +6,7 @@
   :scm {:name "git"
          :url "https://github.com/bakpakin/ezglib"}
   :dependencies [[org.clojure/clojure "1.6.0"]
-                 [org.clojure/clojurescript "0.0-2202"]
-                 [org.clojure/core.async "0.1.303.0-886421-alpha"]]
+                 [org.clojure/clojurescript "0.0-2234"]]
   :plugins [[lein-cljsbuild "1.0.3"]]
   :cljsbuild {
     :builds {
