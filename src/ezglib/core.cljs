@@ -1,49 +1,107 @@
-(ns ezglib.core
-  (:use [cljs.core.async :only [<! >! chan close! sliding-buffer put! alts! timeout]])
-  (:require-macros [cljs.core.async.macros :as asyncm :refer [go alt!]]))
+(ns ezglib.core)
 
-;;;;; State Functions ;;;;;
+;;;;; Mode Functions ;;;;;
 
-(defn add-state!
-  "Adds a state to the game. A state is a
+(defn add-mode!
+  "Adds a mode to the game. A mode is a
   function that takes one parameter, game, and updates
-  the game."
-  [game state-id state]
-  (swap! (:states game) assoc state-id state))
+  the game. The mode function is called once every time
+  through the main loop."
+  [game mode-id mode]
+  (swap! (:modes game) assoc mode-id mode))
 
-(defn remove-state!
-  "Removes a state from the game."
-  [game state-id]
-  (swap! (:states game) dissoc state-id))
+(defn remove-mode!
+  "Removes a mode from the game."
+  [game mode-id]
+  (swap! (:modes game) dissoc mode-id))
 
-(defn current-state
-  "Gets the current state of the game."
+(defn current-mode-id
+  "Gets the id of the current mode of the game."
   [game]
-  @(:state game))
+  @(:mode game))
 
-(defn set-state!
-  "Sets the state of the game. If state-id
+(defn current-mode
+  "Gets the current mode of the game."
+  [game]
+  (@(:modes game) @(:mode game)))
+
+(defn set-mode!
+  "Sets the mode of the game. If mode-id
   does not exist in the game, does nothing and returns nil. Else
-  sets the game state and returns the new state."
-  [game state-id]
-  (if-let [new-state (@(:states game) state-id)]
+  sets the game mode and returns the new mode."
+  [game mode-id]
+  (if-let [new-mode (@(:modes game) mode-id)]
     (let []
-      (reset! (:state game) state-id)
-      new-state)
+      (reset! (:mode game) mode-id)
+      new-mode)
     nil))
 
-(defn states
-  "Gets all availble states of the game."
+(defn modes
+  "Gets all availble modes of the game."
   [game]
-  @(:states game))
+  @(:modes game))
 
-(defn default-state
-   [game]
-   (let [gl (:gl game)]
-     (.clearColor gl 0.0 0.0 0.0 1.0)
-     (.enable gl (.-DEPTH_TEST gl))
-     (.depthFunc gl (.-LEQUAL gl))
-     (.clear gl (bit-or (.-COLOR_BUFFER_BIT gl) (.-DEPTH_BUFFER_BIT gl)))))
+(defn mode
+  "Makes a bare-bones game mode."
+  [update-fn]
+  {:update (fn [gm]
+             (update-fn gm)
+             (reset! (:event-queue gm) cljs.core.PersistentQueue.EMPTY))})
+
+;;;;; Events ;;;;;
+
+(defn queue-event!
+  "Queues an event that happened in the game."
+  [game event-type & params]
+  (swap! (:event-queue game) conj [event-type (vec params)]))
+
+(defn event-mode
+  "Makes a game mode that gets events from
+  the game and executes registered handlers."
+  [update-fn]
+    (let [handlers (atom {})
+          f (fn [gm]
+              (update-fn gm)
+              (queue-event! gm ::end-update)
+              (while (when-let [n (peek @(:event-queue gm))] (not (= ::end-update n)))
+                (let [[et params] (peek @(:event-queue gm))]
+                  (when-let [hs (@handlers et)]
+                    (doseq [h (vals hs)]
+                      (apply h params)))
+                  (swap! (:event-queue gm) pop))))]
+      {:update f
+       :handlers handlers
+       :handler-types (atom {})
+       :next-id (atom 0)}))
+
+(defn add-handler!
+  "Adds a handler to the event-mode for a certain event type.
+  Returns the handler id."
+  [event-mode event-type handler]
+  (let [id (swap! (:next-id event-mode) inc)]
+    (swap! (:handlers event-mode) assoc-in [event-type id] handler)
+    (swap! (:handler-types event-mode) assoc id event-type)
+    id))
+
+(defn handler
+  "Gets the handler associated with the given id
+  in the event-mode."
+  [event-mode id]
+  (if-let [et (@(:handler-types event-mode) id)]
+    (get-in @(:handlers event-mode) [et id])))
+
+(defn remove-handler!
+  "Removes a handler from the event-mode by id.
+  Returns the handler."
+  [event-mode id]
+  (if-let [et (@(:handler-types event-mode) id)]
+    (let [h (get-in @(:handlers event-mode) [et id])]
+      (swap! (:handler-types event-mode) dissoc id)
+      (swap! (:handlers event-mode)
+         (fn [ets e-t i] (assoc ets e-t (dissoc (ets e-t) i)))
+         et
+         id)
+      h)))
 
 ;;;;; Game Initializer Functions ;;;;;
 
@@ -61,6 +119,15 @@
       (.log js/console "Unable to load webgl context. Your browser may not support it.")
       nil))))
 
+(def ^:private default-mode
+   (event-mode
+    (fn [game]
+     (let [gl (:gl game)]
+       (.clearColor gl 0.0 0.0 0.0 1.0)
+       (.enable gl (.-DEPTH_TEST gl))
+       (.depthFunc gl (.-LEQUAL gl))
+       (.clear gl (bit-or (.-COLOR_BUFFER_BIT gl) (.-DEPTH_BUFFER_BIT gl)))))))
+
 (defn game
   "Makes an ezglib game. element-id is the DOM
   element in which the game is injected. game-id is
@@ -68,39 +135,45 @@
   [width height element-id game-id]
   (let [e (.getElementById js/document element-id)
         c (.createElement js/document "canvas")
-        gl (init-gl! c)]
+        gl (init-gl! c)
+        eq (atom cljs.core.PersistentQueue.EMPTY)
+        g {:width width
+           :height height
+           :modes (atom {:default default-mode})
+           :mode (atom :default)
+           :element e
+           :loop (atom true)
+           :canvas c
+           :event-queue eq
+           :gl gl}]
     (set! (.-id c) game-id)
     (set! (.-width c) width)
     (set! (.-height c) height)
     (.appendChild e c)
-
-    {:width width
-     :height height
-     :states (atom {:default default-state})
-     :state (atom :default)
-     :element e
-     :loop (atom true)
-     :canvas c
-     :gl gl}))
+    (.addEventListener e "click" (fn [ev] (queue-event! g :click ev)))
+    (.addEventListener e "keypress" (fn [ev] (queue-event! g :click ev)))
+    g))
 
 (defn- game-loop
-  [game state-id callback-caller]
-  (reset! (:state game) state-id)
+  [game mode-id callback-caller]
+  (reset! (:mode game) mode-id)
   (reset! (:loop game) true)
   ((fn cb []
       (when @(:loop game) (callback-caller cb))
-        (let [s (@(:states game) @(:state game))]
-          (s game)))))
+        (let [s (@(:modes game) @(:mode game))]
+          ((:update s) game)))))
 
 (defn main-loop
   "Runs the main loop of a game. If no fps
   is provided, will run at native fps."
-  ([game state-id fps]
-   (game-loop game state-id
+  ([game mode-id fps]
+   (game-loop game mode-id
               (fn [cb]
                 (js/setTimeout cb (/ 1000 fps)))))
-  ([game state-id]
-   (game-loop game state-id js/requestAnimationFrame)))
+  ([game mode-id]
+   (game-loop game mode-id js/requestAnimationFrame))
+  ([game]
+   (main-loop game :default)))
 
 (defn end-game!
   "Ends the main loop of the game."
@@ -189,6 +262,3 @@
    nil)
   ([asset load-fn]
    (add-asset asset load-fn (fn [x] nil))))
-
-;;;;; Keyboard Functions ;;;;;
-
