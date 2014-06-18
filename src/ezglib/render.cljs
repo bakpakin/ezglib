@@ -8,8 +8,8 @@
   (.depthFunc gl (.-LEQUAL gl))
   (.clear gl (bit-or (.-COLOR_BUFFER_BIT gl) (.-DEPTH_BUFFER_BIT gl))))
 
-(defn init-gl!
-  "Initializes opengl."
+(defn init!
+  "Initializes opengl. Returns gl context."
   [canvas]
   (let [gl (or (.getContext canvas "webgl") (.getContext canvas "experimental-webgl"))]
   (if gl

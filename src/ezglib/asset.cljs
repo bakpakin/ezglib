@@ -72,7 +72,7 @@
 
 (defn add-asset
   "Adds functionality for loading and freeing assets.
-  load-fn can take any number of assets, but free takes one
+  load-fn can take any number of parameters, but free takes one
   parameter. free-fn should take the same parameter that load-fn returns."
   ([asset load-fn free-fn]
     (swap! loaders assoc asset load-fn)

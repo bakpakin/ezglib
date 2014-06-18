@@ -1,7 +1,8 @@
 (ns ezglib.game
   (:require [ezglib.event :as event]
             [ezglib.mode :as mode]
-            [ezglib.render :as render]))
+            [ezglib.render :as render]
+            [ezglib.sound :as sound]))
 
 (def ^:private default-mode
    (event/event-mode
@@ -16,7 +17,8 @@
   [width height element-id game-id]
   (let [e (.getElementById js/document element-id)
         c (.createElement js/document "canvas")
-        gl (render/init-gl! c)
+        gl (render/init! c)
+        ac (sound/init!)
         eq (atom cljs.core.PersistentQueue.EMPTY)
         g {:width width
            :height height
@@ -26,7 +28,8 @@
            :loop (atom true)
            :canvas c
            :event-queue eq
-           :gl gl}]
+           :gl gl
+           :ac ac}]
     (set! (.-id c) game-id)
     (set! (.-width c) width)
     (set! (.-height c) height)
