@@ -7,36 +7,33 @@
 (def ^:private default-mode
    (event/event-mode
     (fn [game]
-     (let [gl (:gl game)]
-       (render/clear! gl)))))
+     (render/clear!))))
+
 
 (defn game
   "Makes an ezglib game. element-id is the DOM
   element in which the game is injected. game-id is
   the id of the game element."
-  [width height element-id game-id]
-  (let [e (.getElementById js/document element-id)
+  ([width height element-id game-id]
+  (let [e (if-let [tmp (.getElementById js/document element-id)] tmp (.-body js/document))
         c (.createElement js/document "canvas")
-        gl (render/init! c)
-        ac (sound/init!)
-        eq (atom cljs.core.PersistentQueue.EMPTY)
-        g {:width width
-           :height height
-           :modes (atom {:default default-mode})
+        g {:modes (atom {:default default-mode})
            :mode (atom :default)
            :element e
            :loop (atom true)
-           :canvas c
-           :event-queue eq
-           :gl gl
-           :ac ac}]
+           :canvas c}]
+    (.appendChild e c)
     (set! (.-id c) game-id)
     (set! (.-width c) width)
     (set! (.-height c) height)
-    (.appendChild e c)
-    (set! (.-onclick e) (fn [ev] (event/enqueue-event! g :click ev)))
-    (set! (.-onkeypress js/document) (fn [ev] (event/enqueue-event! g :key ev)))
+    (render/init! c)
+    (sound/init!)
+    (event/init! c)
     g))
+  ([width height element-id]
+   (game width height element-id ""))
+  ([width height]
+   (game width height "" "")))
 
 (defn- game-loop!
   [game mode-id callback-caller]

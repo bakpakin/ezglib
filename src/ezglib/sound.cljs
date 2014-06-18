@@ -1,25 +1,24 @@
 (ns ezglib.sound
-  (:require [ezglib.asset :as asset]
-            [cljs.core.async :as async
-             :refer [<! >! chan close! sliding-buffer put! alts! timeout]])
-  (:require-macros [cljs.core.async.macros :as m :refer [go alt!]]))
+  (:require [ezglib.asset :as asset]))
+
+;The AudioContext
+(declare context)
 
 (defn init!
-  "Initializes WebAudio. Returns an AudioContext."
+  "Initializes WebAudio. Returns the new context."
   []
   (try
     (do
       (set! (.-AudioContext js/window) (or (.-AudioContext js/window) (.-webkitAudioContext js/window)))
-      (js/AudioContext.))
+      (def ^:private context (js/AudioContext.))
+      context)
     (catch js/Object e
       (.log js/console "Your browser does not support WebAudio."))))
 
 (defn load-sound
   "Loads a sound given a url."
-  [game url]
-  (let [ac (:ac game)
-        request (js/XMLHttpRequest.)
-        source (.createBufferSource ac)
+  [url]
+  (let [request (js/XMLHttpRequest.)
         out (atom nil)]
     (.open request "GET" url true)
     (set! (.-responseType request) "arraybuffer")
@@ -27,23 +26,20 @@
      (.-onload request)
      (fn []
        (.decodeAudioData
-        ac
+        context
         (.-response request)
         (fn [buffer] (reset! out buffer))
         (fn [] (reset! out nil)))))
     (.send request)
-    [out game]))
+    out))
+
+(asset/add-asset :sound load-sound)
 
 (defn play
   "Plays a sound."
   [sound]
-  (let [[buf-atom gm] sound
-        buf @buf-atom
-        ac (:ac gm)]
-    (if buf
-      (let [source (.createBufferSource ac)]
-        (set! (.-buffer source) buf)
-        (.connect source (.-destination ac))
-        (.start source 0)))))
-
-(asset/add-asset :sound load-sound)
+  (if-let [buf @sound]
+    (let [source (.createBufferSource context)]
+      (set! (.-buffer source) buf)
+      (.connect source (.-destination context))
+      (.start source 0))))

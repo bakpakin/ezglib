@@ -24,33 +24,35 @@
 
 (defn load!
   "Loads an asset (Prevents multiple loads).
-  Will fail if the given id defines an asset already. Returns the new asset."
-  ([asset-group asset-type id args]
-  (when (not (contains? @(:id-asset asset-group) id))
+  Will fail if the given id defines an asset already."
+  ([asset-group type-id-args]
+  (doseq [[asset-type id & args] type-id-args]
+   (when (not (contains? @(:id-asset asset-group) id))
     (let [akey (vec args)
           bkey (conj akey asset-type)
           new-a (apply (@loaders asset-type) args)]
       (swap! (:args-id asset-group) assoc-in [asset-type akey] id)
       (swap! (:id-args asset-group) assoc id bkey)
       (swap! (:id-asset asset-group) assoc id new-a)
-      new-a)))
-  ([asset-type id args]
-   (load! default-group asset-type id args)))
+      new-a))))
+  ([type-id-args]
+   (load! default-group type-id-args)))
 
 (defn free!
-  "Frees an already loaded asset."
-  ([asset-group id]
-    (when-let [a (@(:id-asset asset-group) id)]
-      (let [bkey (@(:id-args asset-group) id)
-            asset-type (peek bkey)
-            akey (pop bkey)]
+  "Frees already loaded assets."
+  ([asset-group ids]
+   (doseq [id ids]
+     (when-let [a (@(:id-asset asset-group) id)]
+       (let [bkey (@(:id-args asset-group) id)
+             asset-type (peek bkey)
+             akey (pop bkey)]
         ((@releasers asset-type) a)
         (swap! (:args-id asset-group) assoc asset-type (dissoc (@(:args-id asset-group) asset-type) akey))
         (swap! (:id-asset asset-group) dissoc id)
         (swap! (:id-args asset-group) dissoc id)
-        nil)))
-  ([id]
-   (free! default-group id)))
+        nil))))
+  ([ids]
+   (free! default-group ids)))
 
 (defn free-all-type!
   "Frees all assets of a single type."

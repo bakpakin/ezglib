@@ -1,9 +1,12 @@
 (ns ezglib.event)
 
+;The queue that holds events.
+(declare event-queue)
+
 (defn enqueue-event!
   "Queues an event that happened in the game."
-  [game event-type & params]
-  (swap! (:event-queue game) conj [event-type (vec params)]))
+  [event-type & params]
+  (swap! event-queue conj [event-type (vec params)]))
 
 (defn event-mode
   "Makes a game mode that gets events from
@@ -12,17 +15,22 @@
     (let [handlers (atom {})
           f (fn [gm]
               (update-fn gm)
-              (enqueue-event! gm ::end-update)
-              (while (when-let [n (peek @(:event-queue gm))] (not (= ::end-update n)))
-                (let [[et params] (peek @(:event-queue gm))]
+              (enqueue-event! ::end-update)
+              (while (when-let [n (peek @event-queue)] (not (= ::end-update n)))
+                (let [[et params] (peek @event-queue)]
                   (when-let [hs (@handlers et)]
                     (doseq [h (vals hs)]
                       (apply h params)))
-                  (swap! (:event-queue gm) pop))))]
+                  (swap! event-queue pop))))]
       {:update f
        :handlers handlers
        :handler-types (atom {})
        :next-id (atom 0)}))
+
+(defn drain!
+  "Drains all events in the event queue."
+  []
+  (reset! event-queue cljs.core.PersistentQueue.EMPTY))
 
 (defn add-handler!
   "Adds a handler to the event-mode for a certain event type.
@@ -52,3 +60,10 @@
          et
          id)
       h)))
+
+(defn init!
+  "Initializes events."
+  [canvas]
+  (def ^:private event-queue (atom cljs.core.PersistentQueue.EMPTY))
+  (set! (.-onclick canvas) (fn [ev] (enqueue-event! :click ev)))
+  (set! (.-onkeypress js/document) (fn [ev] (enqueue-event! :key ev))))

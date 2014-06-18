@@ -1,4 +1,5 @@
-(ns ezglib.mode)
+(ns ezglib.mode
+  (:require [ezglib.event :as event]))
 
 (defn add-mode!
   "Adds a mode to the game. A mode is a
@@ -44,4 +45,4 @@
   [update-fn]
   {:update (fn [gm]
              (update-fn gm)
-             (reset! (:event-queue gm) cljs.core.PersistentQueue.EMPTY))})
+             (event/drain! gm))})
