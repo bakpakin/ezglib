@@ -13,8 +13,8 @@
   the game and executes registered handlers."
   [update-fn]
     (let [handlers (atom {})
-          f (fn [gm]
-              (update-fn gm)
+          f (fn []
+              (update-fn)
               (enqueue-event! ::end-update)
               (while (when-let [n (peek @event-queue)] (not (= ::end-update n)))
                 (let [[et params] (peek @event-queue)]
@@ -64,6 +64,4 @@
 (defn init!
   "Initializes events."
   [canvas]
-  (def ^:private event-queue (atom cljs.core.PersistentQueue.EMPTY))
-  (set! (.-onclick canvas) (fn [ev] (enqueue-event! :click ev)))
-  (set! (.-onkeypress js/document) (fn [ev] (enqueue-event! :key ev))))
+  (def ^:private event-queue (atom cljs.core.PersistentQueue.EMPTY)))
