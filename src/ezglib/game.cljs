@@ -6,9 +6,11 @@
 
 (declare ^:private game)
 
+(declare mode)
+
 (defn- default-mode
   []
-   (event/event-mode
+   (mode
     (fn [game]
      (render/clear!))))
 
@@ -57,7 +59,8 @@
       (when @(:loop game) (callback-caller cb))
         (let [s (@(:modes game) @(:mode game))]
           (input/enqueue-keys!)
-          ((:update s))))))
+          ((:update s))
+          (event/handle-events! s)))))
 
 (defn main-loop!
   "Runs the main loop of a game. If no fps
@@ -107,7 +110,7 @@
   sets the game mode and returns the new mode."
   [mode-id]
   (if-let [new-mode (@(:modes game) mode-id)]
-    (let []
+    (do
       (reset! (:mode game) mode-id)
       new-mode)
     nil))
@@ -120,6 +123,7 @@
 (defn mode
   "Makes a bare-bones game mode."
   [update-fn]
-  {:update (fn []
-             (update-fn)
-             (event/drain!))})
+  {:update update-fn
+   :handlers (atom {})
+   :handler-types (atom {})
+   :next-id (atom 0)})

@@ -8,24 +8,18 @@
   [event-type & params]
   (swap! event-queue conj [event-type (vec params)]))
 
-(defn event-mode
-  "Makes a game mode that gets events from
-  the game and executes registered handlers."
-  [update-fn]
-    (let [handlers (atom {})
-          f (fn []
-              (update-fn)
-              (enqueue-event! ::end-update)
-              (while (when-let [n (peek @event-queue)] (not (= ::end-update n)))
-                (let [[et params] (peek @event-queue)]
-                  (when-let [hs (@handlers et)]
-                    (doseq [h (vals hs)]
-                      (apply h params)))
-                  (swap! event-queue pop))))]
-      {:update f
-       :handlers handlers
-       :handler-types (atom {})
-       :next-id (atom 0)}))
+(defn handle-events!
+  "Executes all event handlers in the game-mode for the currently queued events."
+  [mode]
+  (enqueue-event! ::end-update)
+  (while (when-let [n (peek @event-queue)] (not (= ::end-update n)))
+    (let [[et params] (peek @event-queue)]
+      (when-let [hs (@(:handlers mode) et)]
+        (doseq [h (vals hs)]
+          (apply h params)))
+      (swap! event-queue pop)))
+  ;pop off ::end-update
+  (swap! event-queue pop))
 
 (defn drain!
   "Drains all events in the event queue."
@@ -33,29 +27,29 @@
   (reset! event-queue cljs.core.PersistentQueue.EMPTY))
 
 (defn add-handler!
-  "Adds a handler to the event-mode for a certain event type.
+  "Adds a handler to the mode for a certain event type.
   Returns the handler id."
-  [event-mode event-type handler]
-  (let [id (swap! (:next-id event-mode) inc)]
-    (swap! (:handlers event-mode) assoc-in [event-type id] handler)
-    (swap! (:handler-types event-mode) assoc id event-type)
+  [mode event-type handler]
+  (let [id (swap! (:next-id mode) inc)]
+    (swap! (:handlers mode) assoc-in [event-type id] handler)
+    (swap! (:handler-types mode) assoc id event-type)
     id))
 
 (defn handler
   "Gets the handler associated with the given id
-  in the event-mode."
-  [event-mode id]
-  (if-let [et (@(:handler-types event-mode) id)]
-    (get-in @(:handlers event-mode) [et id])))
+  in the mode."
+  [mode id]
+  (if-let [et (@(:handler-types mode) id)]
+    (get-in @(:handlers mode) [et id])))
 
 (defn remove-handler!
-  "Removes a handler from the event-mode by id.
+  "Removes a handler from the mode by id.
   Returns the handler."
-  [event-mode id]
-  (if-let [et (@(:handler-types event-mode) id)]
-    (let [h (get-in @(:handlers event-mode) [et id])]
-      (swap! (:handler-types event-mode) dissoc id)
-      (swap! (:handlers event-mode)
+  [mode id]
+  (if-let [et (@(:handler-types mode) id)]
+    (let [h (get-in @(:handlers mode) [et id])]
+      (swap! (:handler-types mode) dissoc id)
+      (swap! (:handlers mode)
          (fn [ets e-t i] (assoc ets e-t (dissoc (ets e-t) i)))
          et
          id)

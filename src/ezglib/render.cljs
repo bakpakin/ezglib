@@ -1,4 +1,5 @@
-(ns ezglib.render)
+(ns ezglib.render
+  (:require [ezglib.asset :as asset]))
 
 ;The WebGl context
 (declare ^:private gl)
@@ -11,6 +12,9 @@
       (set! (.-viewportWidth glc) (.-width canvas))
       (set! (.-viewportHeight glc) (.-height canvas))
       (.enable glc (.-DEPTH_TEST glc))
+      (.clearColor glc 0.0 0.0 0.0 1.0)
+      (.enable glc (.-DEPTH_TEST glc))
+      (.depthFunc glc (.-LEQUAL glc))
       glc)
     (do
       (.log js/console "Unable to load webgl context. Your browser may not support it.")
@@ -20,7 +24,29 @@
 (defn clear!
   "Clears the gl context."
   []
-  (.clearColor gl 0.0 0.0 0.0 1.0)
-  (.enable gl (.-DEPTH_TEST gl))
-  (.depthFunc gl (.-LEQUAL gl))
   (.clear gl (bit-or (.-COLOR_BUFFER_BIT gl) (.-DEPTH_BUFFER_BIT gl))))
+
+(defn- handle-tex-loaded
+  [image tex]
+  (.bindTexture gl (.-TEXTURE_2D gl) tex)
+  (.texImage2D gl (.-TEXTURE_2D gl) 0 (.-RGBA gl) (.-RGBA gl) (.-UNSIGNED_BYTE gl) image)
+  (.texParameteri gl (.-TEXTURE_2D gl) (.-TEXTURE_MAG_FILTER gl) (.-LINEAR gl))
+  (.texParameteri gl (.-TEXTURE_2D gl) (.-TEXTURE_MIN_FILTER gl) (.-LINEAR_MIPMAP_NEAREST gl))
+  (.generateMipmap gl (.-TEXTURE_2D gl))
+  (.bindTexture gl (.-TEXTURE_2D gl) nil))
+
+(defn load-texture
+  "Loads a texture"
+  [url]
+  (let [tex (.createTexture gl)
+        image (js/Image.)]
+    (set! (.-src image) url)
+    (set! (.-onload image) (fn [] (handle-tex-loaded image tex)))
+    tex))
+
+(defn free-texture
+  "Frees a loaded texture"
+  [tex]
+  (.deleteTexture gl tex))
+
+(asset/add-asset :texture load-texture free-texture)

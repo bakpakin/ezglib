@@ -150,6 +150,14 @@
     (event/enqueue-event! [:keydown k] ev))
   (doseq [[k ev] @releasedkeys]
     (event/enqueue-event! [:keyup k] ev))
+
+  (when (seq @pressedkeys)
+    (event/enqueue-event! :keypress))
+  (when (seq @downkeys)
+    (event/enqueue-event! :keydown))
+  (when (seq @releasedkeys)
+    (event/enqueue-event! :keyup))
+
   (swap! downkeys (fn [ks] (apply dissoc ks (keys @releasedkeys))))
   (reset! pressedkeys {})
   (reset! releasedkeys {}))
