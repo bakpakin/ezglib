@@ -87,8 +87,6 @@
   }"
   )
 
-(declare default-shader)
-
 (defn init!
   "Initializes opengl. Returns gl context."
   [canvas]
@@ -104,5 +102,4 @@
     (do
       (.log js/console "Unable to load webgl context. Your browser may not support it.")
       nil)))
-   (def default-shader (load-shader default-frag-src default-vert-src))
     gl)
