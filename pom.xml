@@ -3,7 +3,7 @@
   <groupId>ezglib</groupId>
   <artifactId>ezglib</artifactId>
   <packaging>jar</packaging>
-  <version>0.1.2-SNAPSHOT</version>
+  <version>0.1.3-SNAPSHOT</version>
   <name>ezglib</name>
   <description>An easy game library for ClojureScript.</description>
   <url>https://github.com/bakpakin/ezglib</url>

@@ -100,9 +100,9 @@
       (.clearColor glc 0.0 0.0 0.0 1.0)
       (.enable glc (.-DEPTH_TEST glc))
       (.depthFunc glc (.-LEQUAL glc))
-      (def default-shader (load-shader default-frag-src default-vert-src))
       glc)
     (do
       (.log js/console "Unable to load webgl context. Your browser may not support it.")
       nil)))
+   (def default-shader (load-shader default-frag-src default-vert-src))
     gl)
