@@ -3,7 +3,7 @@
   <groupId>ezglib</groupId>
   <artifactId>ezglib</artifactId>
   <packaging>jar</packaging>
-  <version>0.1.2</version>
+  <version>0.1.2-SNAPSHOT</version>
   <name>ezglib</name>
   <description>An easy game library for ClojureScript.</description>
   <url>https://github.com/bakpakin/ezglib</url>
@@ -59,6 +59,16 @@
     </repository>
   </repositories>
   <dependencies>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>clojure</artifactId>
+      <version>1.6.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>clojurescript</artifactId>
+      <version>0.0-2197</version>
+    </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>tools.nrepl</artifactId>
