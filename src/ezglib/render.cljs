@@ -2,24 +2,7 @@
   (:require [ezglib.asset :as asset]))
 
 ;The WebGl context
-(declare ^:private gl)
-
-(defn init!
-  "Initializes opengl. Returns gl context."
-  [canvas]
-  (def ^:private gl (if-let [glc (or (.getContext canvas "webgl") (.getContext canvas "experimental-webgl"))]
-    (do
-      (set! (.-viewportWidth glc) (.-width canvas))
-      (set! (.-viewportHeight glc) (.-height canvas))
-      (.enable glc (.-DEPTH_TEST glc))
-      (.clearColor glc 0.0 0.0 0.0 1.0)
-      (.enable glc (.-DEPTH_TEST glc))
-      (.depthFunc glc (.-LEQUAL glc))
-      glc)
-    (do
-      (.log js/console "Unable to load webgl context. Your browser may not support it.")
-      nil)))
-    gl)
+(declare gl)
 
 (defn clear!
   "Clears the gl context."
@@ -50,3 +33,76 @@
   (.deleteTexture gl tex))
 
 (asset/add-asset :texture load-texture free-texture)
+
+(defn- get-shader
+  [src frag-vert]
+  (let [shader (.createShader gl (case frag-vert :frag (.-FRAGMENT_SHADER gl) :vert (.-VERTEX_SHADER gl)))]
+    (.shaderSource gl shader src)
+    (.compileShader gl shader)
+    (if (not (.getShaderParameter gl shader (.-COMPILE_STATUS gl)))
+      (do
+        (.log js/console (str "An error occured while compiling the shader: " (.getShaderInfoLog gl shader)))
+        nil)
+      shader)))
+
+(defn load-shader
+  "Loads a texture from vertex and fragment shader."
+  [frag-src vert-src]
+  (let [frag (get-shader frag-src :frag)
+        vert (get-shader vert-src :vert)
+        prgrm (.createProgram gl)]
+    (.attachShader gl prgrm vert)
+    (.attachShader gl prgrm frag)
+    (.linkProgram gl prgrm)
+    (if (not (.getProgramParameter gl prgrm (.-LINK_STATUS gl)))
+      (do
+        (.log js/console "An error occured while linking the shader.")
+        nil)
+      prgrm)))
+
+(defn use-shader
+  "Bind a shader to gl context."
+  [shader-program]
+  (.useProgram gl shader-program))
+
+(defn shader-attr
+  "Gets a shader attribute location"
+  [shader attr]
+  (.getAttribLocation gl shader attr))
+
+(def ^:private default-frag-src
+  "void main(void) {
+    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+  }"
+  )
+
+(def ^:private default-vert-src
+  "attribute vec3 aVertexPosition;
+
+  uniform mat4 uMVMatrix;
+  uniform mat4 uPMatrix;
+
+  void main(void) {
+    gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+  }"
+  )
+
+(declare default-shader)
+
+(defn init!
+  "Initializes opengl. Returns gl context."
+  [canvas]
+  (def gl (if-let [glc (or (.getContext canvas "webgl") (.getContext canvas "experimental-webgl"))]
+    (do
+      (set! (.-viewportWidth glc) (.-width canvas))
+      (set! (.-viewportHeight glc) (.-height canvas))
+      (.enable glc (.-DEPTH_TEST glc))
+      (.clearColor glc 0.0 0.0 0.0 1.0)
+      (.enable glc (.-DEPTH_TEST glc))
+      (.depthFunc glc (.-LEQUAL glc))
+      (def default-shader (load-shader default-frag-src default-vert-src))
+      glc)
+    (do
+      (.log js/console "Unable to load webgl context. Your browser may not support it.")
+      nil)))
+    gl)
