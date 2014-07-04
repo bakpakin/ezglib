@@ -33,13 +33,12 @@
     (.send request)
     out))
 
-(asset/add-asset :sound load-sound)
+(asset/add-asset-async :sound load-sound (fn [snd] @snd))
 
 (defn play
   "Plays a sound."
   [sound]
-  (if-let [buf @sound]
-    (let [source (.createBufferSource context)]
-      (set! (.-buffer source) buf)
-      (.connect source (.-destination context))
-      (.start source 0))))
+  (let [source (.createBufferSource context)]
+    (set! (.-buffer source) sound)
+    (.connect source (.-destination context))
+    (.start source 0)))

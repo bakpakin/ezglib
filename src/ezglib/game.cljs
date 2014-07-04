@@ -40,6 +40,11 @@
   ([width height]
    (make-game width height "" "")))
 
+(defn canvas
+  "Gets the game canvas used for rendering."
+  []
+  (:cnvas game))
+
 (defn init!
   "Initializes the ezglib game. element-id is the DOM
   element in which the game is injected. game-id is

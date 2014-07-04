@@ -45,31 +45,6 @@
         nil)
       shader)))
 
-(defn load-shader
-  "Loads a texture from vertex and fragment shader."
-  [frag-src vert-src]
-  (let [frag (get-shader frag-src :frag)
-        vert (get-shader vert-src :vert)
-        prgrm (.createProgram gl)]
-    (.attachShader gl prgrm vert)
-    (.attachShader gl prgrm frag)
-    (.linkProgram gl prgrm)
-    (if (not (.getProgramParameter gl prgrm (.-LINK_STATUS gl)))
-      (do
-        (.log js/console "An error occured while linking the shader.")
-        nil)
-      prgrm)))
-
-(defn use-shader
-  "Bind a shader to gl context."
-  [shader-program]
-  (.useProgram gl shader-program))
-
-(defn shader-attr
-  "Gets a shader attribute location"
-  [shader attr]
-  (.getAttribLocation gl shader attr))
-
 (def ^:private default-frag-src
   "void main(void) {
     gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
@@ -87,10 +62,38 @@
   }"
   )
 
+(defn load-shader
+  "Loads a texture from vertex and fragment shader."
+  ([frag-src vert-src]
+  (let [frag (get-shader frag-src :frag)
+        vert (get-shader vert-src :vert)
+        prgrm (.createProgram gl)]
+    (.attachShader gl prgrm vert)
+    (.attachShader gl prgrm frag)
+    (.linkProgram gl prgrm)
+    (if (not (.getProgramParameter gl prgrm (.-LINK_STATUS gl)))
+      (do
+        (.log js/console "An error occured while linking the shader.")
+        nil)
+      prgrm)))
+  ([frag-src]
+   (load-shader frag-src default-vert-src)))
+
+(defn use-shader
+  "Bind a shader to gl context."
+  [shader-program]
+  (.useProgram gl shader-program))
+
+(defn shader-attr
+  "Gets a shader attribute location"
+  [shader attr]
+  (.getAttribLocation gl shader attr))
+
 (defn init!
   "Initializes opengl. Returns gl context."
   [canvas]
-  (def gl (if-let [glc (or (.getContext canvas "webgl") (.getContext canvas "experimental-webgl"))]
+  (def gl
+    (if-let [glc (or (.getContext canvas "webgl") (.getContext canvas "experimental-webgl"))]
     (do
       (set! (.-viewportWidth glc) (.-width canvas))
       (set! (.-viewportHeight glc) (.-height canvas))
@@ -102,4 +105,7 @@
     (do
       (.log js/console "Unable to load webgl context. Your browser may not support it.")
       nil)))
-    gl)
+  (when gl
+    (clear!)
+    (def default-shader (load-shader default-frag-src default-vert-src)))
+  gl)
