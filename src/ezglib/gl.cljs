@@ -1,9 +1,7 @@
 (ns ezglib.gl
   (:require [ezglib.asset :as asset]
             [ezglib.util :as util]
-            [goog.math.Matrix :as mat]
-            [goog.math.Vec3 :as v3]
-            [goog.math.Vec2 :as v2]))
+            [goog.math :as m]))
 
 ;The WebGl context
 (declare gl)
@@ -49,6 +47,7 @@
 
 ;;;;; SHADER FUNCTIONS ;;;;;
 
+(def ^:dynamic *shader* nil)
 (def ^:dynamic *program* nil)
 
 (def frag-header
@@ -159,6 +158,7 @@
    (let [program (:program shader)]
      (when (not= *program* program)
        (def ^:dynamic *program* program)
+       (def ^:dynamic *shader* shader)
        (.useProgram gl program)
 
        ;enable diffuse texture
@@ -169,8 +169,6 @@
 
        ;enable verticies
        (.enableVertexAttribArray gl (:position-location shader))
-
-       ;enable
        )))
 
 (defn shader-attr
@@ -180,7 +178,76 @@
 
 (asset/add-asset-async :shader load-shader shader-loaded? free-shader)
 
-;;;;; DRAW FUNCTIONS ;;;;;
+;;;;; MATRIX FUNCTIONS ;;;;;
+
+(defn apply-projection!
+  "Sends the projection matrix to the gl context."
+  [matrix]
+  (.uniformMatrix4fv gl (:projection-matrix-location *shader*) false (js/Float32Array. (.-array_ matrix))))
+
+(defn apply-model-view!
+  "Sends the model-view matrix to the gl context."
+  [matrix]
+  (.uniformMatrix4fv gl (:model-view-matrix-location *shader*) false (js/Float32Array. (.-array_ matrix))))
+
+(defn perspective
+  "Creates a perspective matrix."
+  ([fov aspect near far left-handed?]
+    (if (or (<= fov 0) (= aspect 0))
+      nil
+      (let [frustum-depth (- far near)
+            one-over-depth (/ 1 frustum-depth)
+            one-one (/ 1 (.tan js/Math (* .5 fov)))
+            zero-zero (* (if left-handed? 1 -1) one-one (/ aspect))
+            two-two (* far one-over-depth)
+            three-two (* (- far) near one-over-depth)]
+        (m/Matrix (array (array zero-zero 0 0 0)
+                         (array 0 one-one 0 0)
+                         (array 0 0 two-two 1)
+                         (array 0 0 three-two 0))))))
+  ([fov aspect near far]
+   (perspective fov aspect near far true)))
+
+(defn orthographic
+  "Creates an orthographic matrix."
+  [x1 x2 y1 y2 z1 z2]
+  (let [dx (- x2 x1)
+        dy (- y2 y1)
+        dz (- z2 z1)]
+    (m/Matrix (array (array (/ 2 dx) 0 0 (- (/ (+ x1 x2) dx)))
+                     (array 0 (/ 2 dy) 0 (- (/ (+ y1 y2) dy)))
+                     (array 0 0 (/ -2 dz) (/ (+ z1 z2) dz))
+                     (array 0 0 0 1)))))
+
+(defn orthographic
+  "Creates an orthographic matrix."
+  [x1 x2 y1 y2 z1 z2]
+  (let [dx (- x2 x1)
+        dy (- y2 y1)
+        dz (- z2 z1)]
+    (m/Matrix. (array (array (/ 2 dx) 0 0 (- (/ (+ x1 x2) dx)))
+                     (array 0 (/ 2 dy) 0 (- (/ (+ y1 y2) dy)))
+                     (array 0 0 (/ -2 dz) (/ (+ z1 z2) dz))
+                     (array 0 0 0 1)))))
+
+;;;;; BUFFER FUNCTIONS ;;;;;
+
+(defn buffer
+  "Creates a buffer and sends it to the gl context."
+  [arr]
+  (if (not (vector? arr))
+    (let [buffer (.createBuffer gl)]
+      (.bindBuffer gl (.-ARRAY_BUFFER gl) buffer)
+      (.bufferData gl (.-ARRAY_BUFFER gl) (js/Float32Array. arr) (.-STATIC_DRAW gl))
+      buffer)
+    (buffer (apply array arr))))
+
+(defn draw-buffer
+  "Draws the buffer to the gl context."
+  [buffer]
+  (.bindBuffer gl (.-ARRAY_BUFFER gl) buffer)
+  (.vertexAttribPointer (:position-location *shader*) 3 (.-FLOAT gl) false 0 0)
+  (.drawArrays gl (.-TRIANGLES gl) 0 (/ (.length buffer) 3)))
 
 ;;;;; INIT ;;;;;
 

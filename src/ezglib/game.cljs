@@ -10,7 +10,7 @@
   []
    (mode
     (fn []
-     (gl/clear!))))
+      (gl/clear!))))
 
 (defn- make-game
   "Makes an ezglib game. element-id is the DOM
@@ -43,7 +43,7 @@
 (defn canvas
   "Gets the game canvas used for rendering."
   []
-  (:cnvas game))
+  (:canvas game))
 
 (defn delta
   "Gets the change in time since the last frame."
