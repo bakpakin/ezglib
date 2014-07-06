@@ -1,8 +1,8 @@
 (ns ezglib.game
   (:require [ezglib.event :as event]
-            [ezglib.gl :as gl]
             [ezglib.sound :as sound]
-            [ezglib.input :as input]))
+            [ezglib.input :as input]
+            [ezglib.gl :as gl]))
 
 (declare game mode)
 

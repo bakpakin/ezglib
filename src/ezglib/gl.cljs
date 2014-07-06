@@ -1,6 +1,9 @@
 (ns ezglib.gl
   (:require [ezglib.asset :as asset]
-            [ezglib.util :as util]))
+            [ezglib.util :as util]
+            [goog.math.Matrix :as mat]
+            [goog.math.Vec3 :as v3]
+            [goog.math.Vec2 :as v2]))
 
 ;The WebGl context
 (declare gl)
@@ -46,6 +49,8 @@
 
 ;;;;; SHADER FUNCTIONS ;;;;;
 
+(def ^:dynamic *program* nil)
+
 (def frag-header
   "
   precision mediump float;\n
@@ -57,7 +62,7 @@
 
 (def default-frag-src
   "void main(void) {\n
-    gl_FragColor = color * texture2D(tDiffuse, vUv);\n
+    gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);\n
   }"
   )
 
@@ -128,23 +133,45 @@
             (.send request-f)
             [(atom nil) atm-f atm-v])))
 
+(defn- wrap-shader
+  "Wraps a raw WebGl shader with information, such as uniform and attribute locations."
+  [shader]
+  {:program shader
+   :projection-matrix-location (.getUniformLocation gl shader "projectionMatrix")
+   :model-view-matrix-location (.getUniformLocation gl shader "modelViewMatrix")
+   :position-location (.getAttribLocation gl shader "position")
+   :diffuse-location (.getUniformLocation gl shader "tDiffuse")
+   :normal-location (.getUniformLocation gl shader "tNormal")
+   :color-location (.getUniformLocation gl shader "color")
+   :uv-location (.getAttribLocation gl shader "aUv")})
+
 (defn- shader-loaded?
-  "Checks if the shader has loaded."
+  "Checks if the shader has loaded. If so, returns the actual program."
   [[atm-shdr atm-f atm-v]]
   (if-let [shdr @atm-shdr]
     shdr
     (when (and @atm-f @atm-v)
-      (reset! atm-shdr (load-shader-src @atm-f @atm-v)))))
+      (reset! atm-shdr (wrap-shader (load-shader-src @atm-f @atm-v))))))
 
-(defn use-shader
+(defn use-shader!
   "Bind a shader to gl context."
-  [shader-program]
-  (.useProgram gl shader-program)
-  ;set uniforms
-  (.uniform1i gl (.getUniformLocation gl shader-program "tDiffuse"), 0)
+  [shader]
+   (let [program (:program shader)]
+     (when (not= *program* program)
+       (def ^:dynamic *program* program)
+       (.useProgram gl program)
 
-  ;enable verticies
-  (.enableVertexAttribArray gl (.getAttribLocation gl shader-program "position")))
+       ;enable diffuse texture
+       (.uniform1i gl (:diffuse-location shader), 0)
+
+       ;enable normal texture
+       (.uniform1i gl (:normal-location shader), 1)
+
+       ;enable verticies
+       (.enableVertexAttribArray gl (:position-location shader))
+
+       ;enable
+       )))
 
 (defn shader-attr
   "Gets a shader attribute location"
@@ -153,9 +180,7 @@
 
 (asset/add-asset-async :shader load-shader shader-loaded? free-shader)
 
-;;;;; BUFFER FUNCTIONS ;;;;;
-
-
+;;;;; DRAW FUNCTIONS ;;;;;
 
 ;;;;; INIT ;;;;;
 
@@ -176,8 +201,6 @@
       (util/log "Unable to load webgl context. Your browser may not support it.")
       nil)))
   (when gl
-    (clear!)
-    (asset/load!
-     :assets [[:shader "default" :string default-frag-src default-vert-src]]))
-    ;(def default-shader (load-shader-src default-frag-src default-vert-src)))
+    (def default-shader (wrap-shader (load-shader-src default-frag-src default-vert-src)))
+    (use-shader! default-shader))
   gl)

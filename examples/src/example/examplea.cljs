@@ -13,16 +13,11 @@
 (defn start
   []
 
-  ;Defines :start as the current game mode. Game modes are what you use
-  ;to define different game modes or states, like a title screen and different levels.
-  (game/add-mode! :start (game/mode (fn [] (gl/clear!))))
-  (game/set-mode! :start)
-
   ;Adds event handlers for click events and keyboard events to the game mode.
   ;The default current-mode is an event-mode, so you can add handlers to it to
   ;listen for events. This plays the "coin" sound on clicks, and the "beep"
   ;sound when the space key is pressed.
-  (let [m (game/get-mode :start)]
+  (let [m (game/current-mode)]
     (event/add-handler! m :click #(sound/play (asset/asset "beep")))
     (input/on-key-press! m :a #(sound/play (asset/asset "coin"))))
 
