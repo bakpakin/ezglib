@@ -15,8 +15,6 @@
         :source-paths ["src" "examples/src"]
         :compiler {:output-to "examples/js/cljs.js"
         :output-dir "examples/js"
-        :foreign-libs [{:file "libs/sylvester.src.js"
-                    :provides ["jcoglan.sylvester"]}]
         :optimizations :none
         :pretty-print true
         :source-map "examples/js/cljs.js.map"}}}})

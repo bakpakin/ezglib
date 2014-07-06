@@ -5,8 +5,7 @@
             [ezglib.sound :as sound]
             [ezglib.input :as input]
             [ezglib.util :as util]
-            [ezglib.gl :as gl]
-            [ezglib.math :as math]))
+            [ezglib.gl :as gl]))
 
 ;Creates the main game object.
 (game/init! 800 600)
@@ -18,8 +17,6 @@
   ;to define different game modes or states, like a title screen and different levels.
   (game/add-mode! :start (game/mode (fn [] (gl/clear!))))
   (game/set-mode! :start)
-
-  (util/log (.inspect (math/v 3 4 5)))
 
   ;Adds event handlers for click events and keyboard events to the game mode.
   ;The default current-mode is an event-mode, so you can add handlers to it to
