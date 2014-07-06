@@ -219,17 +219,6 @@
                      (array 0 0 (/ -2 dz) (/ (+ z1 z2) dz))
                      (array 0 0 0 1)))))
 
-(defn orthographic
-  "Creates an orthographic matrix."
-  [x1 x2 y1 y2 z1 z2]
-  (let [dx (- x2 x1)
-        dy (- y2 y1)
-        dz (- z2 z1)]
-    (m/Matrix. (array (array (/ 2 dx) 0 0 (- (/ (+ x1 x2) dx)))
-                     (array 0 (/ 2 dy) 0 (- (/ (+ y1 y2) dy)))
-                     (array 0 0 (/ -2 dz) (/ (+ z1 z2) dz))
-                     (array 0 0 0 1)))))
-
 ;;;;; BUFFER FUNCTIONS ;;;;;
 
 (defn buffer
