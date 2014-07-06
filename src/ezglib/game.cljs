@@ -1,18 +1,16 @@
 (ns ezglib.game
   (:require [ezglib.event :as event]
-            [ezglib.render :as render]
+            [ezglib.gl :as gl]
             [ezglib.sound :as sound]
             [ezglib.input :as input]))
 
-(declare ^:private game)
-
-(declare mode)
+(declare game mode)
 
 (defn- default-mode
   []
    (mode
-    (fn [game]
-     (render/clear!))))
+    (fn []
+     (gl/clear!))))
 
 (defn- make-game
   "Makes an ezglib game. element-id is the DOM
@@ -25,12 +23,14 @@
            :mode (atom :default)
            :element e
            :loop (atom true)
-           :canvas c}]
+           :canvas c
+           :dt (atom 0)
+           :now (atom (.getTime (js/Date.)))}]
     (.appendChild e c)
     (set! (.-id c) game-id)
     (set! (.-width c) width)
     (set! (.-height c) height)
-    (render/init! c)
+    (gl/init! c)
     (sound/init!)
     (event/init! c)
     (input/init! c)
@@ -45,6 +45,16 @@
   []
   (:cnvas game))
 
+(defn delta
+  "Gets the change in time since the last frame."
+  []
+  @(:dt game))
+
+(defn now
+  "Gets the time of the current frame."
+  []
+  @(:now game))
+
 (defn init!
   "Initializes the ezglib game. element-id is the DOM
   element in which the game is injected. game-id is
@@ -56,16 +66,25 @@
   ([w h]
    (def ^:private game (make-game w h))))
 
+(defn- update-time
+  "Updates the time in the game."
+  []
+  (let [new-now (.getTime (js/Date.))
+        dt (- new-now (:now game))]
+    (reset! (:now game) new-now)
+    (reset! (:dt game) dt)))
+
 (defn- game-loop!
   [mode-id callback-caller]
   (reset! (:mode game) mode-id)
   (reset! (:loop game) true)
   ((fn cb []
       (when @(:loop game) (callback-caller cb))
-        (let [s (@(:modes game) @(:mode game))]
+        (let [m (@(:modes game) @(:mode game))]
           (input/enqueue-keys!)
-          ((:update s))
-          (event/handle-events! s)))))
+          (update-time)
+          ((:update m))
+          (event/handle-events! m)))))
 
 (defn main-loop!
   "Runs the main loop of a game. If no fps
@@ -77,7 +96,7 @@
   ([mode-id]
    (game-loop! mode-id js/requestAnimationFrame))
   ([]
-   (main-loop! :default)))
+   (main-loop! @(:mode game))))
 
 (defn end-game!
   "Ends the main loop of the game."
@@ -108,6 +127,11 @@
   "Gets the current mode of the game."
   []
   (@(:modes game) @(:mode game)))
+
+(defn get-mode
+  "Retrieves a mode by id from the game."
+  [id]
+  (@(:modes game) id))
 
 (defn set-mode!
   "Sets the mode of the game. If mode-id

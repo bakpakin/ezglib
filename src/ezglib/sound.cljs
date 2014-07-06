@@ -15,7 +15,7 @@
     (catch js/Object e
       (.log js/console "Your browser does not support WebAudio."))))
 
-(defn load-sound
+(defn- load-sound
   "Loads a sound given a url."
   [url]
   (let [request (js/XMLHttpRequest.)
