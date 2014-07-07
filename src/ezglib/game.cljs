@@ -31,8 +31,6 @@
     (set! (.-width c) width)
     (set! (.-height c) height)
     (gl/init! c)
-    (sound/init!)
-    (event/init! c)
     (input/init! c)
     g))
   ([width height element-id]

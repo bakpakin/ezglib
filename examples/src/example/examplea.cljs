@@ -14,8 +14,7 @@
   []
 
   ;Adds event handlers for click events and keyboard events to the game mode.
-  ;The default current-mode is an event-mode, so you can add handlers to it to
-  ;listen for events. This plays the "coin" sound on clicks, and the "beep"
+  ;This plays the "coin" sound on clicks, and the "beep"
   ;sound when the space key is pressed.
   (let [m (game/current-mode)]
     (event/add-handler! m :click #(sound/play (asset/asset "beep")))

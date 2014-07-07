@@ -1,19 +1,12 @@
 (ns ezglib.sound
-  (:require [ezglib.asset :as asset]))
+  (:require [ezglib.asset :as asset]
+            [ezglib.util :as util]))
 
-;The AudioContext
-(declare context)
-
-(defn init!
-  "Initializes WebAudio. Returns the new context."
+(defn- create-context
   []
-  (try
-    (do
-      (set! (.-AudioContext js/window) (or (.-AudioContext js/window) (.-webkitAudioContext js/window)))
-      (def ^:private context (js/AudioContext.))
-      context)
-    (catch js/Object e
-      (.log js/console "Your browser does not support WebAudio."))))
+    (js/window.AudioContext.))
+
+(def ^:private context (create-context))
 
 (defn- load-sound
   "Loads a sound given a url."
@@ -25,6 +18,7 @@
     (set!
      (.-onload request)
      (fn []
+       ;Magical Hackery for Advanced compilation - really ugly
        (.decodeAudioData
         context
         (.-response request)
@@ -39,6 +33,6 @@
   "Plays a sound."
   [sound]
   (let [source (.createBufferSource context)]
-    (set! (.-buffer source) sound)
+    (aset source "buffer" sound)
     (.connect source (.-destination context))
     (.start source 0)))

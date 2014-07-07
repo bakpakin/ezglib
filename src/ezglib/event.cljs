@@ -1,7 +1,7 @@
 (ns ezglib.event)
 
 ;The queue that holds events.
-(declare event-queue)
+(def ^:private event-queue (atom cljs.core.PersistentQueue.EMPTY))
 
 (defn enqueue-event!
   "Queues an event that happened in the game."
@@ -54,8 +54,3 @@
          et
          id)
       h)))
-
-(defn init!
-  "Initializes events."
-  [canvas]
-  (def ^:private event-queue (atom cljs.core.PersistentQueue.EMPTY)))

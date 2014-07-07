@@ -1,11 +1,11 @@
 (ns ezglib.input
   (:require [ezglib.event :as event]))
 
-(def ^:private downkeys (atom {}))
+(def downkeys (atom {}))
 
-(def ^:private pressedkeys (atom {}))
+(def pressedkeys (atom {}))
 
-(def ^:private releasedkeys (atom {}))
+(def releasedkeys (atom {}))
 
 (defn key-down?
   "Checks if the given key is down. k should be
@@ -19,7 +19,7 @@
   [k]
   (contains? @pressedkeys k))
 
-(def ^:private code->keys
+(def code-to-keys
   {8 :backspace
    9 :tab
    13 :return
@@ -38,7 +38,7 @@
    38 :up
    39 :right
    40 :down
-   43 :+
+   43 :plus
    44 :printscreen
    45 :insert
    46 :delete
@@ -53,7 +53,7 @@
    56 :8
    57 :9
    59 :semi-colon
-   61 :=
+   61 :equals
    65 :a
    66 :b
    67 :c
@@ -90,11 +90,11 @@
    103 :7
    104 :8
    105 :9
-   106 :*
-   107 :+
-   109 :-
-   110 :.
-   111 :/
+   106 :asterix
+   107 :plus
+   109 :minus
+   110 :period
+   111 :forward-slash
    112 :f1
    113 :f2
    114 :f3
@@ -110,21 +110,21 @@
    144 :numlock
    145 :scrolllock
    186 :semi-colon
-   187 :=
+   187 :equals
    188 :comma
-   189 :-
-   190 :.
-   191 :/
-   192 :`
+   189 :minus
+   190 :period
+   191 :forward-slash
+   192 :grave-accent
    219 :open-bracket
    220 :backslash
    221 :close-bracket
-   222 :'})
+   222 :quote})
 
 (defn event-key
   "Gets the key from the keyboard event."
   [ev]
-  (code->keys (.-which ev)))
+  (code-to-keys (.-which ev)))
 
 (defn on-key-press!
   "Adds an event handler for key presses."
@@ -166,7 +166,7 @@
   "Initializes the input."
   [canvas]
   (set! (.-onclick canvas) (fn [ev] (event/enqueue-event! :click ev)))
-   (set! (.-onkeydown js/window) (fn [ev]
+  (set! (.-onkeydown js/window) (fn [ev]
                                      (let [k (event-key ev)]
                                        (when (not (contains? @downkeys k))
                                          (swap! pressedkeys assoc k ev)
