@@ -16,6 +16,5 @@
         :compiler {:output-to "examples/js/cljs.js"
                    :output-dir "examples/js"
                    :optimizations :advanced
-                   :pretty-print true
-                   :externs ["clojure-js/externs/webaudio.js"]
+                   :pretty-print false
                    :source-map "examples/js/cljs.js.map"}}}})

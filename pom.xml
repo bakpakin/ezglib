@@ -67,7 +67,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>clojurescript</artifactId>
-      <version>0.0-2197</version>
+      <version>0.0-2268</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
