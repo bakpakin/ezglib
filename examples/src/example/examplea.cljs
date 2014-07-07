@@ -27,6 +27,6 @@
 ;When assets are done loading, calls start. This function returns immediatley.
 (asset/load!
  :on-load start
- :assets [[:sound "coin" "resources/mariocoin.wav"]
-          [:sound "beep" "resources/beep.wav"]
+ :assets [[:sound "beep" "resources/beep.wav"]
+          [:sound "coin" "resources/mariocoin.wav"]
           [:texture "star" "resources/star.png"]])

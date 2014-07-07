@@ -124,7 +124,7 @@
 (defn event-key
   "Gets the key from the keyboard event."
   [ev]
-  (code-to-keys (.-which ev)))
+  (code-to-keys (aget ev "which")))
 
 (defn on-key-press!
   "Adds an event handler for key presses."
@@ -165,12 +165,12 @@
 (defn init!
   "Initializes the input."
   [canvas]
-  (set! (.-onclick canvas) (fn [ev] (event/enqueue-event! :click ev)))
-  (set! (.-onkeydown js/window) (fn [ev]
+  (aset canvas "onclick" (fn [ev] (event/enqueue-event! :click ev)))
+  (aset js/window "onkeydown" (fn [ev]
                                      (let [k (event-key ev)]
                                        (when (not (contains? @downkeys k))
                                          (swap! pressedkeys assoc k ev)
                                          (swap! downkeys assoc k ev)))))
-   (set! (.-onkeyup js/window) (fn [ev]
+   (aset js/window "onkeyup" (fn [ev]
                                   (let [k (event-key ev)]
                                     (swap! releasedkeys assoc k ev)))))

@@ -16,5 +16,5 @@
         :compiler {:output-to "examples/js/cljs.js"
                    :output-dir "examples/js"
                    :optimizations :advanced
-                   :pretty-print false
+                   :pretty-print true
                    :source-map "examples/js/cljs.js.map"}}}})
