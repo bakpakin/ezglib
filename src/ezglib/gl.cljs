@@ -9,18 +9,18 @@
 (defn clear!
   "Clears the gl context."
   []
-  (.clear gl (bit-or (aget gl "COLOR_BUFFER_BIT") (aget gl "DEPTH_BUFFER_BIT"))))
+  (.clear gl (bit-or (.-COLOR_BUFFER_BIT gl) (.-DEPTH_BUFFER_BIT gl))))
 
 ;;;;; TEXTURE FUNCTIONS ;;;;;
 
 (defn- handle-tex-loaded
   [image tex]
-  (.bindTexture gl (aget gl "TEXTURE_2D") tex)
-  (.texImage2D gl (aget gl "TEXTURE_2D") 0 (aget gl "RGBA") (aget gl "RGBA") (aget gl "UNSIGNED_BYTE") image)
-  (.texParameteri gl (aget gl "TEXTURE_2D") (aget gl "TEXTURE_MAG_FILTER") (aget gl "LINEAR"))
-  (.texParameteri gl (aget gl "TEXTURE_2D") (aget gl "TEXTURE_MIN_FILTER") (aget gl "LINEAR_MIPMAP_NEAREST"))
-  (.generateMipmap gl (aget gl "TEXTURE_2D"))
-  (.bindTexture gl (aget gl "TEXTURE_2D") nil))
+  (.bindTexture gl (.-TEXTURE_2D gl) tex)
+  (.texImage2D gl (.-TEXTURE_2D gl) 0 (.-RGBA gl) (.-RGBA gl) (.-UNSIGNED_BYTE gl) image)
+  (.texParameteri gl (.-TEXTURE_2D gl) (.-TEXTURE_MAG_FILTER gl) (.-LINEAR gl))
+  (.texParameteri gl (.-TEXTURE_2D gl) (.-TEXTURE_MIN_FILTER gl) (.-LINEAR_MIPMAP_NEAREST gl))
+  (.generateMipmap gl (.-TEXTURE_2D gl))
+  (.bindTexture gl (.-TEXTURE_2D gl) nil))
 
 (defn- is-tex-loaded?
   [[tex atm]]
@@ -32,8 +32,8 @@
   (let [tex (.createTexture gl)
         image (js/Image.)
         atm (atom false)]
-    (aset image "src" url)
-    (aset image "onload" (fn []
+    (set! (.-src image)  url)
+    (set! (.-onload image) (fn []
                              (handle-tex-loaded image tex)
                              (reset! atm true)))
     [tex atm]))
@@ -84,10 +84,10 @@
 
 (defn- get-shader
   [src frag-vert]
-  (let [shader (.createShader gl (case frag-vert :frag (aget gl "FRAGMENT_SHADER") :vert (aget gl "VERTEX_SHADER")))]
+  (let [shader (.createShader gl (case frag-vert :frag (.-FRAGMENT_SHADER gl) :vert (.-VERTEX_SHADER gl)))]
     (.shaderSource gl shader (str (case frag-vert :frag frag-header :vert vert-header) "\n" src))
     (.compileShader gl shader)
-    (if (not (.getShaderParameter gl shader (aget gl "COMPILE_STATUS")))
+    (if (not (.getShaderParameter gl shader (.-COMPILE_STATUS gl)))
       (do
         (util/log "An error occured while compiling the shader: " (.getShaderInfoLog gl shader))
         nil)
@@ -102,7 +102,7 @@
     (.attachShader gl prgrm vert)
     (.attachShader gl prgrm frag)
     (.linkProgram gl prgrm)
-    (if (not (.getProgramParameter gl prgrm (aget gl "LINK_STATUS")))
+    (if (not (.getProgramParameter gl prgrm (.-LINK_STATUS gl)))
       (do
         (util/log "An error occured while linking the shader.")
         nil)
@@ -126,8 +126,8 @@
                 request-f (js/XMLHttpRequest.)]
             (.open request-v "GET" vert true)
             (.open request-f "GET" frag true)
-            (aset request-v "onload" (fn [] (reset! atm-v (aget request-v "response"))))
-            (aset request-f "onload" (fn [] (reset! atm-f (aget request-f "response"))))
+            (set! (.-onload request-v) (fn [] (reset! atm-v (aget request-v "response"))))
+            (set! (.-onload request-f) (fn [] (reset! atm-f (aget request-f "response"))))
             (.send request-v)
             (.send request-f)
             [(atom nil) atm-f atm-v])))
@@ -183,12 +183,12 @@
 (defn apply-projection!
   "Sends the projection matrix to the gl context."
   [matrix]
-  (.uniformMatrix4fv gl (:projection-matrix-location *shader*) false (js/Float32Array. (aget matrix "array_"))))
+  (.uniformMatrix4fv gl (:projection-matrix-location *shader*) false (js/Float32Array. (.-array_ matrix))))
 
 (defn apply-model-view!
   "Sends the model-view matrix to the gl context."
   [matrix]
-  (.uniformMatrix4fv gl (:model-view-matrix-location *shader*) false (js/Float32Array. (aget matrix "array_"))))
+  (.uniformMatrix4fv gl (:model-view-matrix-location *shader*) false (js/Float32Array. (.-array_  matrix))))
 
 (defn mat-perspective
   "Creates a perspective matrix."
@@ -222,7 +222,7 @@
 (defn mat-identity
   "Creates an identity matrix."
   [size]
-  ((aget goog.math.Matrix "createIdentityMatrix") size))
+  ((.-createIdentityMatrix goog.math.Matrix) size))
 
 (defn mat-translation
   "Returns a 4x4 matrix representing a translation."
@@ -241,18 +241,18 @@
   [arr item-size]
   (if (not (vector? arr))
     (let [buffer (.createBuffer gl)]
-      (.bindBuffer gl (aget gl "ARRAY_BUFFER") buffer)
-      (.bufferData gl (aget gl "ARRAY_BUFFER") (js/Float32Array. arr) (aget gl "STATIC_DRAW"))
-      (aset buffer "itemSize" item-size)
+      (.bindBuffer gl (.-ARRAY_BUFFER gl) buffer)
+      (.bufferData gl (.-ARRAY_BUFFER gl) (js/Float32Array. arr) (.-STATIC_DRAW gl))
+      (set! (.-itemSize buffer) item-size)
       buffer)
     (buffer (apply array arr) item-size)))
 
 (defn draw-buffer
   "Draws the buffer to the gl context."
   ([vert-buffer]
-    (.bindBuffer gl (aget gl "ARRAY_BUFFER") vert-buffer)
-    (.vertexAttribPointer gl (:position-location *shader*) 3 (aget gl "FLOAT") false 0 0)
-    (.drawArrays gl (aget gl "TRIANGLES") 0 (/ (aget buffer "length") (aget buffer "itemSize")))))
+    (.bindBuffer gl (.-ARRAY_BUFFER gl) vert-buffer)
+    (.vertexAttribPointer gl (:position-location *shader*) 3 (.-FLOAT gl) false 0 0)
+    (.drawArrays gl (.-TRIANGLES gl) 0 (/ (.-length buffer) (.-itemSize buffer)))))
 
 ;;;;; INIT ;;;;;
 
@@ -264,10 +264,10 @@
     (do
       (aset glc "viewportWidth" (aget canvas "width"))
       (aset glc "viewportHeight" (aget canvas "height"))
-      (.enable glc (aget glc "DEPTH_TEST"))
+      (.enable glc (.-DEPTH_TEST glc))
       (.clearColor glc 0.0 0.0 0.0 1.0)
-      (.enable glc (aget glc "DEPTH_TEST"))
-      (.depthFunc glc (aget glc "LEQUAL"))
+      (.enable glc (.-DEPTH_TEST glc))
+      (.depthFunc glc (.-LEQUAL glc))
       glc)
     (do
       (util/log "Unable to load webgl context. Your browser may not support it.")
