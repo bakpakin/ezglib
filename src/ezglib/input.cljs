@@ -128,35 +128,35 @@
 
 (defn on-key-press!
   "Adds an event handler for key presses."
-  [event-mode k fn1]
-  (event/add-handler! event-mode [:keypress k] fn1))
+  [mode k fn1]
+  (event/add-handler! mode [:keypress k] fn1))
 
 (defn on-key-down!
   "Adds an event handler for key presses."
-  [event-mode k fn1]
-  (event/add-handler! event-mode [:keydown k] fn1))
+  [mode k fn1]
+  (event/add-handler! mode [:keydown k] fn1))
 
-(defn on-key-up!
+(defn on-key-release!
   "Adds an event handler for key releases."
-  [event-mode k fn1]
-  (event/add-handler! event-mode [:keyup k] fn1))
+  [mode k fn1]
+  (event/add-handler! mode [:keyrelease k] fn1))
 
 (defn enqueue-keys!
   "Enqueues keyboard events. This should be called once a frame."
-  []
+  [game]
   (doseq [[k ev] @pressedkeys]
-    (event/enqueue-event! [:keypress k] ev))
+    (event/enqueue-event! game [:keypress k] ev))
   (doseq [[k ev] @downkeys]
-    (event/enqueue-event! [:keydown k] ev))
+    (event/enqueue-event! game [:keydown k] ev))
   (doseq [[k ev] @releasedkeys]
-    (event/enqueue-event! [:keyup k] ev))
+    (event/enqueue-event! game [:keyrelease k] ev))
 
   (when (seq @pressedkeys)
-    (event/enqueue-event! :keypress))
+    (event/enqueue-event! game :keypress))
   (when (seq @downkeys)
-    (event/enqueue-event! :keydown))
+    (event/enqueue-event! game :keydown))
   (when (seq @releasedkeys)
-    (event/enqueue-event! :keyup))
+    (event/enqueue-event! game :keyrelease))
 
   (swap! downkeys (fn [ks] (apply dissoc ks (keys @releasedkeys))))
   (reset! pressedkeys {})
@@ -164,13 +164,17 @@
 
 (defn init!
   "Initializes the input."
-  [canvas]
-  (aset canvas "onclick" (fn [ev] (event/enqueue-event! :click ev)))
-  (aset js/window "onkeydown" (fn [ev]
-                                     (let [k (event-key ev)]
-                                       (when (not (contains? @downkeys k))
-                                         (swap! pressedkeys assoc k ev)
-                                         (swap! downkeys assoc k ev)))))
-   (aset js/window "onkeyup" (fn [ev]
-                                  (let [k (event-key ev)]
-                                    (swap! releasedkeys assoc k ev)))))
+  [game]
+  (aset (:canvas game) "onclick" (fn [ev] (event/enqueue-event! game :click ev))))
+
+
+;;;;; GLOBAL KEYBOARD SETUP ;;;;;
+
+(aset js/window "onkeydown" (fn [ev]
+                              (let [k (event-key ev)]
+                                (when (not (contains? @downkeys k))
+                                  (swap! pressedkeys assoc k ev)
+                                  (swap! downkeys assoc k ev)))))
+(aset js/window "onkeyup" (fn [ev]
+                            (let [k (event-key ev)]
+                              (swap! releasedkeys assoc k ev))))

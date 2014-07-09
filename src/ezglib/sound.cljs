@@ -17,22 +17,24 @@
   (:require [ezglib.asset :as asset]
             [ezglib.util :as util]))
 
-(defn- create-context
+(defn create-context
+  "Creates an audio context."
   []
+    ;would rather use (js/AudioContext.)
     (js* "new AudioContext()"))
-
-(def ^:private context (create-context))
 
 (defn- load-sound
   "Loads a sound given a url."
-  [url]
-  (let [request (js/XMLHttpRequest.)
+  [game url]
+  (let [context (:audio-context game)
+        request (js/XMLHttpRequest.)
         out (atom nil)]
     (.open request "GET" url true)
     (set! (.-responseType request) "arraybuffer")
     (set!
      (.-onload request)
      (fn []
+       ;would rather use .decodeAudioData
        (.call (aget context "decodeAudioData")
         context
         (.-response request)
@@ -41,12 +43,24 @@
     (.send request)
     out))
 
-(asset/add-asset-async :sound load-sound (fn [snd] @snd))
+(defn- sound-loaded?
+  [game sound]
+  (when @sound
+    (let [context (:audio-context game)
+          s @sound]
+      (set! (.-context s) context)
+      s)))
+
+(asset/add-asset
+ :asset :sound
+ :load-fn load-sound
+ :is-done? sound-loaded?)
 
 (defn play
   "Plays a sound."
   [sound]
-  (let [source (.call (aget context "createBufferSource") context)]
+  (let [context (.-context sound)
+        source (.call (aget context "createBufferSource") context)]
     (aset source "buffer" sound)
     (.call (aget source "connect") source (aget context "destination"))
     (.call (aget source "start") source 0)))

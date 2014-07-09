@@ -1,30 +1,29 @@
 (ns ezglib.event)
 
-;The queue that holds events.
-(def ^:private event-queue (atom cljs.core.PersistentQueue.EMPTY))
-
 (defn enqueue-event!
   "Queues an event that happened in the game."
-  [event-type & params]
-  (swap! event-queue conj [event-type (vec params)]))
+  [game event-type & params]
+  (swap! (:event-queue game) conj [event-type (vec params)]))
 
 (defn handle-events!
-  "Executes all event handlers in the game-mode for the currently queued events."
-  [mode]
-  (enqueue-event! ::end-update)
-  (while (when-let [n (peek @event-queue)] (not (= ::end-update n)))
-    (let [[et params] (peek @event-queue)]
-      (when-let [hs (@(:handlers mode) et)]
-        (doseq [h (vals hs)]
-          (apply h params)))
-      (swap! event-queue pop)))
-  ;pop off ::end-update
-  (swap! event-queue pop))
+  "Executes all event handlers in the game-mode for the currently queued events.
+  Users of this library should not usually have to call this."
+  [game mode]
+  (enqueue-event! game ::end-update)
+  (let [event-queue (:event-queue game)]
+    (while (when-let [n (peek @event-queue)] (not (= ::end-update n)))
+      (let [[et params] (peek @event-queue)]
+        (when-let [hs (@(:handlers mode) et)]
+          (doseq [h (vals hs)]
+            (apply h params)))
+        (swap! event-queue pop)))
+    ;pop off ::end-update
+    (swap! event-queue pop)))
 
 (defn drain!
   "Drains all events in the event queue."
-  []
-  (reset! event-queue cljs.core.PersistentQueue.EMPTY))
+  [game]
+  (reset! (:event-queue game) cljs.core.PersistentQueue.EMPTY))
 
 (defn add-handler!
   "Adds a handler to the mode for a certain event type.

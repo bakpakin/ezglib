@@ -22,12 +22,12 @@
   ([id]
    (asset default-group id))
   ([asset-group id]
-    (get @(:id-asset asset-group) id)))
+    (get (get @(:id-asset asset-group) id) 1)))
 
 (defn- make-handles
-  [args]
+  [game args]
   (let [f (fn [[atype id & args]]
-               (let [h (apply (@loaders atype) args)
+               (let [h (apply (@loaders atype) game args)
                      isdn (@is-dones atype)
                      akey (vec args)
                      bkey (conj akey atype)]
@@ -44,18 +44,19 @@
          on-load (or (mp :on-load) (fn [] nil))
          asset-group (or (mp :asset-group) default-group)
          update (or (mp :update) (fn [p] nil))
+         game (or (mp :game) nil)
          progress (atom 0)
          done-handles (atom 0)
-         handles (atom (make-handles type-id-args))
+         handles (atom (make-handles game type-id-args))
          num-handles (count @handles)
          f (fn cb [ts]
              (update @progress)
              (if (seq @handles)
-               (let [finished-handles (select-keys @handles (for [[k [h isdn id atype akey]] @handles :when (isdn h)] k))]
+               (let [finished-handles (select-keys @handles (for [[k [h isdn id atype akey]] @handles :when (isdn game h)] k))]
                  (doseq [[bkey [h isdn id atype akey]] finished-handles]
                    (swap! (:args-id asset-group) assoc-in [atype akey] id)
                    (swap! (:id-args asset-group) assoc id bkey)
-                   (swap! (:id-asset asset-group) assoc id (isdn h))
+                   (swap! (:id-asset asset-group) assoc id [game (isdn game h)])
                    (.log js/console (str "Loaded " atype " with id " id " from " akey "."))
                    (swap! done-handles inc)
                    (reset! progress (/ @done-handles num-handles)))
@@ -69,11 +70,11 @@
   "Frees already loaded assets."
   ([asset-group ids]
    (doseq [id ids]
-     (when-let [a (@(:id-asset asset-group) id)]
+     (when-let [[game a] (@(:id-asset asset-group) id)]
        (let [bkey (@(:id-args asset-group) id)
              asset-type (peek bkey)
              akey (pop bkey)]
-        ((@releasers asset-type) a)
+        ((@releasers asset-type) game a)
         (swap! (:args-id asset-group) assoc asset-type (dissoc (@(:args-id asset-group) asset-type) akey))
         (swap! (:id-asset asset-group) dissoc id)
         (swap! (:id-args asset-group) dissoc id)
@@ -99,26 +100,22 @@
   ([]
    (free-all! default-group)))
 
-(defn add-asset-async
-   "Adds functionality for loading and freeing assets async.
-  load-fn can take any number of parameters, and shoud return a handle
-  to the asset. is-done? is a predicate to check if the loading is done (should take one
-  parameter, the asset handle.) If so, should
-  return either the original handle or a new handle to the asset. free-fn takes one
-  parameter. free-fn should take the same parameter that load-fn returns."
-  ([asset load-fn is-done? free-fn]
-   (swap! loaders assoc asset load-fn)
-   (swap! releasers assoc asset free-fn)
-   (swap! is-dones assoc asset is-done?)
-   nil)
-  ([asset load-fn is-done?]
-   (add-asset-async asset load-fn is-done? (fn [x] nil))))
-
 (defn add-asset
-  "Adds functionality for loading and freeing assets.
-  load-fn can take any number of parameters, but free-fn takes one
-  parameter. free-fn should take the same parameter that load-fn returns."
-  ([asset load-fn free-fn]
-    (add-asset-async asset load-fn identity free-fn))
-  ([asset load-fn]
-   (add-asset asset load-fn (fn [x] nil))))
+  "Adds functionality for loading and freeing assets. Takes named parameters.
+  \n
+  :asset - the name of the asset to define, should be a keyword.\n
+  :load-fn - fn that takes at least one argument, the game, and any number of other arguments.
+  Returns a handle to the loading process.\n
+  :is-done? (optional) - fn to check if the loading is done (should take two
+  parameters, the game and the asset handle.)
+  If so, should return either the original handle or a new handle to the asset.
+  Default value is (fn [game x] x).\n
+  :free-fn (optional) - fn that frees the asset from memory (takes two
+  parameters, the game and the asset handle).
+  free-fn should take the same parameter that is-fn returns.
+  Default value is (fn [game x] nil)."
+  [& {:keys [asset load-fn is-done? free-fn]}]
+  (swap! loaders assoc asset load-fn)
+  (swap! releasers assoc asset (or free-fn (fn [game x] nil)))
+  (swap! is-dones assoc asset (or is-done? (fn [game x] x)))
+  nil)
