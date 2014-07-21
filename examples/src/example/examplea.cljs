@@ -17,14 +17,10 @@
    :modes {:start (game/mode
                    :update (fn []
                              (gl/clear-color (:gl g) 1 .8 .7 1))
-                   :key-press {:a #(sound/play (asset/asset "beep"))
-                               :r #(sound/play (asset/asset "roar"))
-                               :d #(sound/play (asset/asset "drops"))}
+                   :key-press {:a #(sound/play (asset/asset "beep"))}
                    :handlers {:click #(sound/play (asset/asset "coin"))})}
    :assets [[:sound "beep" "resources/beep.wav"]
             [:sound "coin" "resources/mariocoin.wav"]
-            [:sound "roar" "resources/Roar.mp3"]
-            [:sound "drops" "resources/Drops of Jupiter.mp3"]
             [:texture "star" "resources/star.png"]]
    :start-on-load? true))
 
