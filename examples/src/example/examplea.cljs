@@ -5,9 +5,10 @@
             [ezglib.sound :as sound]
             [ezglib.input :as input]
             [ezglib.util :as util]
-            [ezglib.render.gl :as gl]))
+            [ezglib.render.gl :as gl]
+            [ezglib.render.scene2d :as s2]))
 
-(declare g)
+(declare g sg)
 
 (def g
   (game/create
@@ -15,13 +16,15 @@
    :height 600
    :mode :start
    :modes {:start (game/mode
-                   :update (fn []
-                             (gl/clear-color (:gl g) 1 .8 .7 1))
+                   :update (fn [] (s2/draw! sg))
                    :key-press {:a #(sound/play (asset/asset "beep"))}
                    :handlers {:click #(sound/play (asset/asset "coin"))})}
    :assets [[:sound "beep" "resources/beep.wav"]
             [:sound "coin" "resources/mariocoin.wav"]
-            [:texture "star" "resources/star.png"]]
-   :start-on-load? true))
+            [:texture "star" "resources/star.png"]]))
+
+(def sg (s2/graph (:gl g)))
+
+(game/main-loop! g)
 
 

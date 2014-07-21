@@ -20,8 +20,8 @@
 (defn create-context
   "Creates an audio context."
   []
-    ;would rather use (js/AudioContext.)
-    (js* "new AudioContext()"))
+  (let [c (or (aget js/window "AudioContext") (aget js/window "webkitAudioContext"))]
+    (c.)))
 
 (defn- load-sound
   "Loads a sound given a url."
