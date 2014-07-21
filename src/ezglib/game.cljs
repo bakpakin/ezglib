@@ -3,10 +3,7 @@
             [ezglib.sound :as sound]
             [ezglib.input :as input]
             [ezglib.asset :as asset]
-            [ezglib.render.gl :as gl]
-            ;require shader and texture so they are loaded into compiler.
-            [ezglib.render.shader :as shader]
-            [ezglib.render.texture :as texture]))
+            [ezglib.render.gl :as gl]))
 
 ;;;;; Mode Functions ;;;;;
 
@@ -99,7 +96,7 @@
     (set! (.-width c) width)
     (set! (.-height c) height)
     (input/init! g)
-    (gl/clear! (:gl g))
+    (gl/clear (:gl g))
     (when assets
       (asset/load!
         :game g
