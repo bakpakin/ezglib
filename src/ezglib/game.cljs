@@ -53,7 +53,7 @@
 
 (defn mode
   "Makes a game mode with specified handlers."
-  [& {:keys [update handlers key-press key-release key-down]}]
+  [& {:keys [update handlers key-press key-release key-down] :as args}]
   (let [m {:update (or update (fn [] nil))
            :handlers (atom {})
            :handler-types (atom {})
@@ -77,7 +77,7 @@
   element in which the game is injected. game-id is
   the id of the game element."
   [& {:keys [width height element element-id game-id modes mode canvas
-             assets on-load load-update start-on-load?]}]
+             assets on-load load-update start-on-load?] :as args}]
   (let [e (if-let [tmp (.getElementById js/document element-id)] tmp (.-body js/document))
         c (.createElement js/document "canvas")
         g {:modes (atom (or modes {:default (mode)}))

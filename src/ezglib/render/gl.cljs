@@ -377,6 +377,20 @@
      (= value-type js/Float32Array)
      (= value-type js/Float64Array))))
 
+(defn array-gl-type
+  "Returns the equivalent WebGl constant contained in the typed array."
+  [value]
+  (case (type value)
+    js/Int8Array gl-byte
+    js/Uint8Array gl-byte
+    js/Uint8ClampedArray gl-byte
+    js/Int16Array gl-short
+    js/Uint16Array gl-short
+    js/Int32Array gl-int
+    js/Uint32Array gl-int
+    js/Float32Array gl-float
+    js/Float64Array gl-float))
+
 ;;;;; CONTEXT ;;;;;
 
 (defn create-context
@@ -389,6 +403,7 @@
       (.enable glc depth-test)
       (.clearColor glc 0.0 0.0 0.0 1.0)
       (.enable glc depth-test)
+      (.enable glc blend)
       (.depthFunc glc lequal)
       glc)
     (do
@@ -416,7 +431,7 @@
   (.-canvas gl))
 
 (defn get-viewport
-  "Returns the current viewport for a given `gl-context` as a map with the form:
+  "Returns the current viewport for a given gl context as a map with the form:
 
   {:x,
    :y,
@@ -429,10 +444,34 @@
      :width  w,
      :height h}))
 
+(defn set-viewport!
+  "Sets the current viewport for a given gl context. Expects a map with the form:
+
+  {:x,
+   :y,
+   :width,
+   :height}"
+  [gl {:keys [x y width height] :as viewport}]
+  (.viewport gl x y width height)
+  gl)
+
+(defn reset-viewport!
+  "Resets the viewport to be the same size as the canvas."
+  [gl]
+  (.viewport gl 0 0 (context-width gl) (context-height gl)))
+
 (defn enabled?
   "Checks if a certain capability is enabled."
   [gl capability]
   (.isEnabled gl capability))
+
+(defn set-capability!
+  "Enables or disables a capability."
+  [gl capability enabled?]
+  (if enabled?
+    (.enable gl capability)
+    (.disable gl capability))
+  gl)
 
 ;;;;; BUFFER ;;;;;
 
@@ -446,15 +485,19 @@
   :usage (optional) must be either ezglib.render.gl/static-draw (default) or ezglib.render.gl/dynamic-draw.
 
   :item-size (optional)."
-  [& {:keys [gl data target usage item-size]}]
+  [& {:keys [gl data target usage item-size] :as args}]
   (let [buffer (.createBuffer gl)
         target (or target array-buffer)
         usage (or usage static-draw)]
     (.bindBuffer gl target buffer)
     (.bufferData gl target data usage)
-    (when item-size
-      (set! (.-itemSize buffer) item-size)
-      (set! (.-numItems buffer) (quot (.-length data) item-size)))
+    (if item-size
+      (do
+        (set! (.-itemSize buffer) item-size)
+        (set! (.-numItems buffer) (quot (.-length data) item-size)))
+      (do
+        (set! (.-itemSize buffer) nil)
+        (set! (.-numItems buffer) nil)))
     buffer))
 
 ;;;;; TEXTURE ;;;;;
@@ -480,6 +523,7 @@
         image (js/Image.)
         atm (atom false)]
     (set! (.-src image)  url)
+    (set! (.-crossOrigin image) "anonymous")
     (set! (.-onload image) (fn []
                              (handle-tex-loaded (:gl game) image tex)
                              (reset! atm true)))
@@ -495,6 +539,16 @@
  :load-fn load-texture
  :is-done? is-tex-loaded?
  :free-fn free-texture)
+
+(defn bind-texture!
+  "Binds the texture to the context to be used by an ezglib shader."
+  ([gl texture]
+   (bind-texture! gl texture 0))
+  ([gl texture tex-unit]
+   (let [unit (+ tex-unit texture0)]
+     (.activeTexture gl unit)
+     (.bindTexture gl texture-2d texture)
+     gl)))
 
 ;;;;; SHADER ;;;;;
 
@@ -535,6 +589,12 @@
   "void main(void) {\n
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n
     vUv = aUv;\n
+  }"
+  )
+
+(def simple-vert-src
+  "void main(void) {\n
+    gl_Position = vec4(position, 1.0);\n
   }"
   )
 
@@ -591,16 +651,30 @@
 (defn- wrap-shader
   "Wraps a raw WebGl shader with information, such as uniform and attribute locations."
   [gl shader]
-  {:program shader
-   :gl gl
-   :projection-matrix (.getUniformLocation gl shader "projectionMatrix")
-   :model-view-matrix (.getUniformLocation gl shader "modelViewMatrix")
-   :position (.getAttribLocation gl shader "position")
-   :diffuse (.getUniformLocation gl shader "tDiffuse")
-   :normal (.getUniformLocation gl shader "tNormal")
-   :color (.getUniformLocation gl shader "color")
-   :time (.getUniformLocation gl shader "time")
-   :uv (.getAttribLocation gl shader "aUv")})
+  (let [attributes (atom {})
+        uniforms (atom {})
+        attribute-types (atom {})
+        uniform-types (atom {})
+        active-uniforms (.getProgramParameter gl shader active-uniforms)
+        active-attributes (.getProgramParameter gl shader active-attributes)]
+    (doseq [i (range active-uniforms)]
+      (let [u (.getActiveUniform gl shader i)
+            n (.-name u)
+            kn (keyword n)]
+        (swap! uniforms assoc kn (.getUniformLocation gl shader n))
+        (swap! uniform-types assoc kn (.-type u))))
+    (doseq [i (range active-attributes)]
+        (let [a (.getActiveAttrib gl shader i)
+              n (.-name a)
+              kn (keyword n)]
+          (swap! attributes assoc kn (.getAttribLocation gl shader n))
+          (swap! attribute-types assoc kn (.-type a))))
+    {:program shader
+     :gl gl
+     :uniforms @uniforms
+     :attributes @attributes
+     :uniform-types @uniform-types
+     :attribute-types @attribute-types}))
 
 (defn make-shader
   "Creates a ezglib shader from fragment and vertex shader source."
@@ -611,6 +685,14 @@
   "Creates an ezglib color shader for a gl context."
   [gl]
   (make-shader gl color-frag-src default-vert-src))
+
+(defn simple-color-shader
+  "Creates a simple ezglib color shader for a gl context."
+  [gl]
+  (make-shader gl color-frag-src
+  "void main(void) {\n
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n
+  }"))
 
 (defn texture-shader
   "Creates an ezglib texture shader for a gl context."
@@ -631,56 +713,46 @@
  :is-done? shader-loaded?
  :free-fn free-shader)
 
-(defn attrib-location
-  "Gets the attribute location in an ezglib shader."
-  [gl shader attrib-name]
-  (.getAttribLocation gl (:program shader) attrib-name))
-
-(defn uniform-location
-  "Gets the uniform location in an ezglib shader."
-  [gl shader uniform-name]
-  (.getUniformLocation gl (:program shader) uniform-name))
-
 (defn set-uniform!
   "Sets a uniform on an ezglib shader. Shader must be in use.
 
-  type should be on of:
-  :float, :vec2, :vec3, :vec4, :int, :ivec2, :ivec3, :ivec4, :mat2, :mat3, :mat4.
+  values should be a typed array when appropriate.
 
-  values should be a typed array.
-
-  location can be either the name, the numerical location, or the keyword of the uniform."
-  [gl shader location type values]
+  location must be the keyword form of the uniform name."
+  [gl shader location values]
   (let [program (:program shader)
-        loc (if (string? location)
-              (.getUniformLocation gl program location)
-              (if (keyword? location)
-                (location shader)
-                location))]
-    (case type
-      :float  (.uniform1fv gl loc values)
-      :vec2   (.uniform2fv gl loc values)
-      :vec3   (.uniform3fv gl loc values)
-      :vec4   (.uniform4fv gl loc values)
-      :int    (.uniform1iv gl loc values)
-      :ivec2  (.uniform2iv gl loc values)
-      :ivec3  (.uniform3iv gl loc values)
-      :ivec4  (.uniform4iv gl loc values)
-      :mat2   (.uniformMatrix2fv gl loc false values)
-      :mat3   (.uniformMatrix3fv gl loc false values)
-      :mat4   (.uniformMatrix4fv gl loc false values)
-      nil)
+        loc (location (:uniforms shader))]
+    (case (location (:uniform-types shader))
+
+      35670    (.uniform1fv gl loc values) ;bool
+      35671    (.uniform2fv gl loc values) ;bool-vec2
+      35672    (.uniform3fv gl loc values) ;bool-vec3
+      35673    (.uniform4fv gl loc values) ;bool-vec4
+
+      5126     (.uniform1fv gl loc values) ;gl-float
+      35664    (.uniform2fv gl loc values) ;float-vec2
+      35665    (.uniform3fv gl loc values) ;float-vec3
+      35666    (.uniform4fv gl loc values) ;float-vec4
+
+      5124     (.uniform1iv gl loc values) ;gl-int
+      35667    (.uniform2iv gl loc values) ;int-vec2
+      35668    (.uniform3iv gl loc values) ;int-vec3
+      35669    (.uniform4iv gl loc values) ;int-vec4
+
+      35674    (.uniformMatrix2fv gl loc false values) ;float-mat2
+      35675    (.uniformMatrix3fv gl loc false values) ;float-mat3
+      35676    (.uniformMatrix4fv gl loc false values) ;float-mat4
+
+      35678    (.uniform1fv gl loc values) ;sampler-2d
+      35680    (.uniform1fv gl loc values) ;sampler-cube
+     )
     gl))
 
 (defn set-attribute!
   "Sets an attribute on an ezglib shader. Shader must be in use."
-  [gl shader location buffer & {:keys [type normalized? stride offset components-per-vertex]}]
+  [gl shader location {:keys [buffer normalized? stride offset type components-per-vertex] :as opts}]
   (let [program (:program shader)
-        loc (if (string? location)
-              (.getUniformLocation gl program location)
-              (if (keyword? location)
-                (location shader)
-                location))]
+        loc (location (:attributes shader))]
     (.bindBuffer gl array-buffer buffer)
     (.enableVertexAttribArray gl loc)
     (.vertexAttribPointer
@@ -693,27 +765,22 @@
      (or offset 0))
     gl))
 
-(defn set-texture!
-  "Sets the texture used by an ezglib shader.  Shader must be in use."
-  ([gl shader texture location]
-   (set-texture! gl shader texture location 0))
-  ([gl shader texture location tex-unit]
-   (let [unit (+ tex-unit texture0)
-         program (:program shader)
-         loc (if (string? location)
-               (.getUniformLocation gl program location)
-               (if (keyword? location)
-                 (location shader)
-                 location))]
-     (.activeTexture gl unit)
-     (.bindTexture gl texture-2d texture)
-     (.uniform1i gl loc tex-unit)
-     gl)))
-
 (defn use-shader!
   "Sets the context to use an ezglib shader."
-  [gl shader]
-  (.useProgram gl (:program shader)))
+  [gl shader & {:keys [uniforms attributes textures] :as opts}]
+  (.useProgram gl (:program shader))
+  (when opts
+    (when uniforms
+      (doseq [[loc values] uniforms]
+        (set-uniform! gl shader loc values)))
+
+    (when attributes
+      (doseq [[loc opts] attributes]
+        (set-attribute! gl shader loc opts)))
+
+    (when textures
+      (doseq [[tex-unit tex] textures]
+        (bind-texture! gl tex tex-unit)))))
 
 ;;;;; DRAW ;;;;;
 
@@ -749,3 +816,57 @@
    gl)
   ([gl]
    (clear-stencil gl 0)))
+
+(defn draw-arrays
+  "Draws arrays to gl context."
+  ([gl draw-mode first count]
+   (.drawArrays gl draw-mode first count)
+   gl)
+  ([gl draw-mode count]
+   (.drawArrays gl draw-mode 0 count)
+   gl))
+
+(defn draw-elements
+  "Draws arrays to gl context."
+  ([gl buffer draw-mode count type offset]
+   (.bindBuffer gl element-array-buffer buffer)
+   (.drawElements gl draw-mode count type offset)
+   gl))
+
+(def ^:private default-capabilities
+  {blend                    false
+   cull-face                false
+   depth-test               false
+   dither                   true
+   polygon-offset-fill      false
+   sample-alpha-to-coverage false
+   sample-coverage          false
+   scissor-test             false
+   stencil-test             false})
+
+(defn draw!
+  "Draws to the gl context."
+  [gl & {:keys [uniforms attributes textures shader draw-mode first count
+                blending? blend-src blend-dest capabilities element-array viewport] :as opts}]
+
+  (set-viewport! gl (or viewport
+                               {:x      0,
+                                :y      0,
+                                :width  (context-width gl),
+                                :height (context-height gl)}))
+
+  (use-shader! gl shader :uniforms uniforms :attributes attributes :textures textures)
+
+  (doseq [[capability enabled?] (merge default-capabilities capabilities)]
+    (set-capability! gl capability enabled?))
+
+  (if (nil? element-array)
+    (.drawArrays gl draw-mode (or first 0) count)
+    (do
+      (.bindBuffer gl element-array-buffer (:buffer element-array))
+      (.drawElements gl draw-mode count (:type element-array) (:offset element-array))))
+
+  (doseq [[a _] attributes]
+    (.disableVertexAttribArray gl ((:attributes shader) a)))
+
+  gl)
