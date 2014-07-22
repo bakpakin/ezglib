@@ -380,16 +380,17 @@
 (defn array-gl-type
   "Returns the equivalent WebGl constant contained in the typed array."
   [value]
-  (case (type value)
-    js/Int8Array gl-byte
-    js/Uint8Array gl-byte
-    js/Uint8ClampedArray gl-byte
-    js/Int16Array gl-short
-    js/Uint16Array gl-short
-    js/Int32Array gl-int
-    js/Uint32Array gl-int
-    js/Float32Array gl-float
-    js/Float64Array gl-float))
+  (let [value-type (type value)]
+    (or
+     (if (= value-type js/Int8Array) gl-byte)
+     (if (= value-type js/Uint8Array) unsigned-byte)
+     (if (= value-type js/Uint8ClampedArray) unsigned-byte)
+     (if (= value-type js/Int16Array) gl-short)
+     (if (= value-type js/Uint16Array) unsigned-short)
+     (if (= value-type js/Int32Array) gl-int)
+     (if (= value-type js/Uint32Array) unsigned-int)
+     (if (= value-type js/Float32Array) gl-float)
+     (if (= value-type js/Float64Array) high-float))))
 
 ;;;;; CONTEXT ;;;;;
 
@@ -498,6 +499,7 @@
       (do
         (set! (.-itemSize buffer) nil)
         (set! (.-numItems buffer) nil)))
+    (set! (.-dataType buffer) (array-gl-type data))
     buffer))
 
 ;;;;; TEXTURE ;;;;;
@@ -864,7 +866,7 @@
     (.drawArrays gl draw-mode (or first 0) count)
     (do
       (.bindBuffer gl element-array-buffer (:buffer element-array))
-      (.drawElements gl draw-mode count (:type element-array) (:offset element-array))))
+      (.drawElements gl draw-mode count (.-dataType (:buffer element-array)) (:offset element-array))))
 
   (doseq [[a _] attributes]
     (.disableVertexAttribArray gl ((:attributes shader) a)))

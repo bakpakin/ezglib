@@ -42,17 +42,4 @@
               :element-array
               {:buffer element-buffer
                :count 3
-               :type gl/unsigned-short
                :offset 0})))
-
-(def ma (m/create 1 4 5
-                  6 3 7
-                  8 8 0))
-
-(def mb (m/create 4 2 9
-                  7 9 1
-                  5 1 1))
-
-(m/mult! ma mb)
-
-(util/log (m/to-string ma))

@@ -108,7 +108,7 @@
          (aset a i (nth result i))))
    a))
   ([a b & more]
-   (reduce add! (add! a b) more)))
+   (reduce mult! (mult! a b) more)))
 
 (defn mult
   "Multiplies matricies together."
@@ -119,12 +119,37 @@
   ([a b & more]
    (apply mult! (dup a) b more)))
 
-(defn perspective-matrix
+;Shamelessly stolen from gluPerspective. See http://www.opengl.org/wiki/GluPerspective_code
+(defn perspective
   "Constructs a perspective projection matrix."
-  []
-  ())
+  ([left right bottom top z-near z-far]
+   (let [tmp (* 2)
+         tmp2 (- right left)
+         tmp3 (- top bottom)
+         tmp4 (- z-far z-near)]
+      (create
+       (/ tmp tmp2)
+       0
+       0
+       0
+       0
+       (/ tmp tmp3)
+       0
+       0
+       (/ (+ right left) tmp2)
+       (/ (+ top bottom) tmp3)
+       (/ (+ z-near z-far) tmp4 -1)
+       -1
+       0
+       0
+       (/ (* tmp z-far -1) tmp4)
+       0)))
+  ([fov aspect z-near z-far]
+   (let [ymax (* z-near (.tan js/Math (/ (* fov (.-PI js/Math)) 360)))
+         xmax (* ymax aspect)]
+     (perspective (- xmax) xmax (- ymax) ymax az-near z-far))))
 
-(defn orthographic-matrix
+(defn orthographic
   "Constructs an orthographic projection matrix."
   [x1 x2 y1 y2 z1 z2]
   ())
