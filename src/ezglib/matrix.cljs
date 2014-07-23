@@ -120,6 +120,10 @@
   ([a b & more]
    (reduce mult (mult a b) more)))
 
+;;;; GL UTIL FUNCTIONS ;;;;;
+
+(def ^:private deg-to-rad (/ (.-PI js/Math) 180))
+
 ;Shamelessly stolen from gluPerspective. See http://www.opengl.org/wiki/GluPerspective_code
 (defn perspective
   "Constructs a perspective projection matrix."
@@ -193,4 +197,56 @@
               [(* 2 (+ xy zw))         (- 1 (* 2 (+ xx zz)))   (* 2 (- yz xw))         0]
               [(* 2 (- xz yw))         (* 2 (+ yz xw))         (- 1 (* 2 (+ xx yy)))   0]
               [0                       0                       0                       1]] 4 4)))
+
+(defn rotate-x
+  "Constructs a rotation matrix that represents an x axis rotation."
+  [degrees]
+  (let [rad (* deg-to-rad degrees)
+        c (.cos js/Math rad)
+        s (.sin js/Math rad)
+        -s (- s)]
+    (Matrix. [[1  0  0  0]
+              [0  c  s 0]
+              [0  -s c  0]
+              [0  0  0  1]] 4 4)))
+
+(defn rotate-y
+  "Constructs a rotation matrix that represents a y axis rotation."
+  [degrees]
+  (let [rad (* deg-to-rad degrees)
+        c (.cos js/Math rad)
+        s (.sin js/Math rad)
+        -s (- s)]
+    (Matrix. [[c  0  -s 0]
+              [0  1  0  0]
+              [s  0  c  0]
+              [0  0  0  1]] 4 4)))
+
+(defn rotate-z
+  "Constructs a rotation matrix that represents a z axis rotation."
+  [degrees]
+  (let [rad (* deg-to-rad degrees)
+        c (.cos js/Math rad)
+        s (.sin js/Math rad)
+        -s (- s)]
+    (Matrix. [[c  s  0  0]
+              [-s c  0  0]
+              [0  0  1  0]
+              [0  0  0  1]] 4 4)))
+
+(defn translate
+  "Constructs a translation matrix."
+  [x y z]
+  (Matrix. [[1 0 0 0]
+            [0 1 0 0]
+            [0 0 1 0]
+            [x y z 1]] 4 4))
+
+(defn scale
+  "Constructs a scaling matrix."
+  [x y z]
+  (Matrix. [[x 0 0 0]
+            [0 y 0 0]
+            [0 0 z 0]
+            [0 0 0 1]] 4 4))
 

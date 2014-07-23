@@ -404,16 +404,15 @@
 (defn create-context
   "Creates the opengl context."
   [canvas]
-  (if-let [glc (or (.getContext canvas "webgl") (.getContext canvas "experimental-webgl"))]
+  (if-let [gl (or (.getContext canvas "webgl") (.getContext canvas "experimental-webgl"))]
     (do
-      (set! (.-viewportWidth glc)  (.-width canvas))
-      (set! (.-viewportHeight glc) (.-height canvas))
-      (.enable glc depth-test)
-      (.clearColor glc 0.0 0.0 0.0 1.0)
-      (.enable glc depth-test)
-      (.enable glc blend)
-      (.depthFunc glc lequal)
-      glc)
+      (.viewport gl 0 0 (.-width canvas) (.-height canvas))
+      (.enable gl depth-test)
+      (.clearColor gl 0.0 0.0 0.0 1.0)
+      (.enable gl depth-test)
+      (.enable gl blend)
+      (.depthFunc gl lequal)
+      gl)
     (do
       (util/log "Unable to load webgl context. Your browser may not support it.")
       nil)))
@@ -427,6 +426,17 @@
   "Gets the height of the gl context's drawing buffer."
   [gl]
   (.-drawingBufferHeight gl))
+
+(defn native-aspect
+  "Gets the native aspect ratio of the gl context, i.e. the aspect ratio of the canvas."
+  [gl]
+  (/ (.-drawingBufferWidth gl) (.-drawingBufferHeight gl)))
+
+(defn aspect
+  "Gets the current aspect ratio of the gl context."
+  [gl]
+  (let [ps (.getParameter gl viewport)]
+    (/ (aget ps 2) (aget ps 3))))
 
 (defn context-lost?
   "Returns whether the context was lost."
@@ -479,6 +489,14 @@
   (if enabled?
     (.enable gl capability)
     (.disable gl capability))
+  gl)
+
+(defn set-capabilities!
+  "Enables or disables capabilities."
+  [gl & capabilities]
+  (let [caps (apply hash-map capabilities)]
+    (doseq [[capability enabled?] capabilities]
+      (set-capability! gl capability enabled?)))
   gl)
 
 ;;;;; BUFFER ;;;;;
@@ -601,12 +619,6 @@
   }"
   )
 
-(def simple-vert-src
-  "void main(void) {\n
-    gl_Position = vec4(position, 1.0);\n
-  }"
-  )
-
 (defn- get-shader
   [gl src frag-vert]
   (let [shader (.createShader gl (case frag-vert :frag fragment-shader :vert vertex-shader))]
@@ -691,11 +703,6 @@
   (wrap-shader gl (load-shader-src gl frag vert)))
 
 (defn color-shader
-  "Creates an ezglib color shader for a gl context."
-  [gl]
-  (make-shader gl color-frag-src default-vert-src))
-
-(defn simple-color-shader
   "Creates a simple ezglib color shader for a gl context."
   [gl]
   (make-shader gl color-frag-src
@@ -732,32 +739,46 @@
   (let [program (:program shader)
         loc (location (:uniforms shader))
         t (location (:uniform-types shader))
-        v (if (typed-array? value) value
+        v (if (or (number? value) (typed-array? value))
+            value
             (-typed-array value))]
-    (case t
+    (if (number? v)
+      (case t
 
-      35670    (.uniform1iv gl loc v) ;bool
-      35671    (.uniform2iv gl loc v) ;bool-vec2
-      35672    (.uniform3iv gl loc v) ;bool-vec3
-      35673    (.uniform4iv gl loc v) ;bool-vec4
+        35670    (.uniform1i gl loc v) ;bool
+        5126     (.uniform1f gl loc v) ;gl-float
+        5124     (.uniform1i gl loc v) ;gl-int
 
-      5126     (.uniform1fv gl loc v) ;gl-float
-      35664    (.uniform2fv gl loc v) ;float-vec2
-      35665    (.uniform3fv gl loc v) ;float-vec3
-      35666    (.uniform4fv gl loc v) ;float-vec4
+        35678    (.uniform1i gl loc v) ;sampler-2d
+        35680    (.uniform1i gl loc v) ;sampler-cube
 
-      5124     (.uniform1iv gl loc v) ;gl-int
-      35667    (.uniform2iv gl loc v) ;int-vec2
-      35668    (.uniform3iv gl loc v) ;int-vec3
-      35669    (.uniform4iv gl loc v) ;int-vec4
+        (util/log "Couldn't set uniform \"" (name location) "\" on shader with value: " value))
 
-      35674    (.uniformMatrix2fv gl loc false v) ;float-mat2
-      35675    (.uniformMatrix3fv gl loc false v) ;float-mat3
-      35676    (.uniformMatrix4fv gl loc false v) ;float-mat4
+      (case t
 
-      35678    (.uniform1i gl loc v) ;sampler-2d
-      35680    (.uniform1i gl loc v) ;sampler-cube
-     )
+        35670    (.uniform1iv gl loc v) ;bool
+        35671    (.uniform2iv gl loc v) ;bool-vec2
+        35672    (.uniform3iv gl loc v) ;bool-vec3
+        35673    (.uniform4iv gl loc v) ;bool-vec4
+
+        5126     (.uniform1fv gl loc v) ;gl-float
+        35664    (.uniform2fv gl loc v) ;float-vec2
+        35665    (.uniform3fv gl loc v) ;float-vec3
+        35666    (.uniform4fv gl loc v) ;float-vec4
+
+        5124     (.uniform1iv gl loc v) ;gl-int
+        35667    (.uniform2iv gl loc v) ;int-vec2
+        35668    (.uniform3iv gl loc v) ;int-vec3
+        35669    (.uniform4iv gl loc v) ;int-vec4
+
+        35674    (.uniformMatrix2fv gl loc false v) ;float-mat2
+        35675    (.uniformMatrix3fv gl loc false v) ;float-mat3
+        35676    (.uniformMatrix4fv gl loc false v) ;float-mat4
+
+        35678    (.uniform1iv gl loc v) ;sampler-2d
+        35680    (.uniform1iv gl loc v) ;sampler-cube
+
+        (util/log "Couldn't set uniform \"" (name location) "\" on shader with value: " value)))
     gl))
 
 (defn set-attribute!
@@ -782,17 +803,18 @@
   [gl shader & {:keys [uniforms attributes textures] :as opts}]
   (.useProgram gl (:program shader))
   (when opts
+
+    (when textures
+      (doseq [[tex-unit tex] textures]
+        (bind-texture! gl tex tex-unit)))
+
     (when uniforms
       (doseq [[loc values] uniforms]
         (set-uniform! gl shader loc values)))
 
     (when attributes
       (doseq [[loc opts] attributes]
-        (set-attribute! gl shader loc opts)))
-
-    (when textures
-      (doseq [[tex-unit tex] textures]
-        (bind-texture! gl tex tex-unit)))))
+        (set-attribute! gl shader loc opts)))))
 
 ;;;;; DRAW ;;;;;
 
@@ -829,7 +851,7 @@
   ([gl]
    (clear-stencil gl 0)))
 
-(defn draw-arrays
+(defn draw-arrays!
   "Draws arrays to gl context."
   ([gl draw-mode first count]
    (.drawArrays gl draw-mode first count)
@@ -838,11 +860,11 @@
    (.drawArrays gl draw-mode 0 count)
    gl))
 
-(defn draw-elements
-  "Draws arrays to gl context."
-  ([gl buffer draw-mode count type offset]
+(defn draw-elements!
+  "Draws the elements of bound attribute arrays to gl context."
+  ([gl buffer draw-mode count offset]
    (.bindBuffer gl element-array-buffer buffer)
-   (.drawElements gl draw-mode count type offset)
+   (.drawElements gl draw-mode count (.-dataType buffer) offset)
    gl))
 
 (def ^:private default-capabilities
