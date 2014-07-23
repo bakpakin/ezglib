@@ -315,6 +315,13 @@
 (def viewport 2978)
 (def zero 0)
 
+;;;;; PROTOCOLS ;;;;;
+
+(defprotocol ITypedArray
+  "Types that extend the ITypedArray protocol can be converted
+  to javascript typed arrays for in use in shader uniforms."
+  (-typed-array [this]))
+
 ;;;;; TYPED ARRAYS ;;;;;
 
 (defn int8
@@ -718,35 +725,38 @@
 (defn set-uniform!
   "Sets a uniform on an ezglib shader. Shader must be in use.
 
-  values should be a typed array when appropriate.
+  value should be a typed array when appropriate.
 
   location must be the keyword form of the uniform name."
-  [gl shader location values]
+  [gl shader location value]
   (let [program (:program shader)
-        loc (location (:uniforms shader))]
-    (case (location (:uniform-types shader))
+        loc (location (:uniforms shader))
+        t (location (:uniform-types shader))
+        v (if (typed-array? value) value
+            (-typed-array value))]
+    (case t
 
-      35670    (.uniform1fv gl loc values) ;bool
-      35671    (.uniform2fv gl loc values) ;bool-vec2
-      35672    (.uniform3fv gl loc values) ;bool-vec3
-      35673    (.uniform4fv gl loc values) ;bool-vec4
+      35670    (.uniform1iv gl loc v) ;bool
+      35671    (.uniform2iv gl loc v) ;bool-vec2
+      35672    (.uniform3iv gl loc v) ;bool-vec3
+      35673    (.uniform4iv gl loc v) ;bool-vec4
 
-      5126     (.uniform1fv gl loc values) ;gl-float
-      35664    (.uniform2fv gl loc values) ;float-vec2
-      35665    (.uniform3fv gl loc values) ;float-vec3
-      35666    (.uniform4fv gl loc values) ;float-vec4
+      5126     (.uniform1fv gl loc v) ;gl-float
+      35664    (.uniform2fv gl loc v) ;float-vec2
+      35665    (.uniform3fv gl loc v) ;float-vec3
+      35666    (.uniform4fv gl loc v) ;float-vec4
 
-      5124     (.uniform1iv gl loc values) ;gl-int
-      35667    (.uniform2iv gl loc values) ;int-vec2
-      35668    (.uniform3iv gl loc values) ;int-vec3
-      35669    (.uniform4iv gl loc values) ;int-vec4
+      5124     (.uniform1iv gl loc v) ;gl-int
+      35667    (.uniform2iv gl loc v) ;int-vec2
+      35668    (.uniform3iv gl loc v) ;int-vec3
+      35669    (.uniform4iv gl loc v) ;int-vec4
 
-      35674    (.uniformMatrix2fv gl loc false values) ;float-mat2
-      35675    (.uniformMatrix3fv gl loc false values) ;float-mat3
-      35676    (.uniformMatrix4fv gl loc false values) ;float-mat4
+      35674    (.uniformMatrix2fv gl loc false v) ;float-mat2
+      35675    (.uniformMatrix3fv gl loc false v) ;float-mat3
+      35676    (.uniformMatrix4fv gl loc false v) ;float-mat4
 
-      35678    (.uniform1fv gl loc values) ;sampler-2d
-      35680    (.uniform1fv gl loc values) ;sampler-cube
+      35678    (.uniform1i gl loc v) ;sampler-2d
+      35680    (.uniform1i gl loc v) ;sampler-cube
      )
     gl))
 

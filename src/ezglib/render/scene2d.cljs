@@ -36,7 +36,7 @@
 
               :uniforms
               {:color (gl/float32 [0.5 0.6 0.7 1.0])
-               :projectionMatrix (m/i)
+               :projectionMatrix (m/ortho -10 10 -10 10 -1 1)
                :modelViewMatrix (m/i)}
 
               :element-array
