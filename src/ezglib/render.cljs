@@ -31,34 +31,34 @@
    :vertex-buffer (gl/buffer
                    :gl gl
                    :data (util/float32 [1.0 1.0 1.0
-                                      -1.0 1.0 1.0
-                                      1.0 -1.0 1.0
-                                      -1.0 -1.0 1.0
-                                      1.0 1.0 -1.0
-                                      -1.0 1.0 -1.0
-                                      1.0 -1.0 -1.0
-                                      -1.0 -1.0 -1.0])
+                                        -1.0 1.0 1.0
+                                        1.0 -1.0 1.0
+                                        -1.0 -1.0 1.0
+                                        1.0 1.0 -1.0
+                                        -1.0 1.0 -1.0
+                                        1.0 -1.0 -1.0
+                                        -1.0 -1.0 -1.0])
                    :item-size 3)
    :uv-buffer (gl/buffer
                :gl gl
                :data (util/float32 [0.0 0.0
-                                  0.0 1.0
-                                  1.0 0.0
-                                  1.0 1.0
-                                  1.0 1.0
-                                  1.0 0.0
-                                  0.0 1.0
-                                  0.0 0.0])
+                                    0.0 1.0
+                                    1.0 0.0
+                                    1.0 1.0
+                                    0.0 1.0
+                                    0.0 0.0
+                                    1.0 1.0
+                                    1.0 0.0])
                :item-size 2)
    :element-buffer (gl/buffer
                     :gl gl
                     :target gl/element-array-buffer
                     :data (util/uint16 [0 1 2 1 2 3
-                                      4 5 6 5 6 7
-                                      0 1 4 1 4 5
-                                      0 2 4 2 4 6
-                                      1 3 5 3 5 7
-                                      2 3 6 3 6 7]))})
+                                        4 5 6 5 6 7
+                                        0 1 4 1 4 5
+                                        0 2 4 2 4 6
+                                        1 3 5 3 5 7
+                                        2 3 6 3 6 7]))})
 
 (defn draw!
   "Draws the scenegraph."
@@ -86,6 +86,4 @@
                                  (m/rotate-x (/ (util/now) 70))
                                  (m/translate 0 0 5))}
 
-              :element-array
-              {:buffer element-buffer
-               :offset 0})))
+              :element-buffer element-buffer)))

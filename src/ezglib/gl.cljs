@@ -717,9 +717,35 @@
         (util/log "Couldn't set uniform \"" (name location) "\" on shader with value: " value)))
     gl))
 
+(defn- vertex-type
+  [shader location]
+  (case (location (:attribute-types shader))
+
+    35670    unsigned-byte ;bool
+    35671    unsigned-byte ;bool-vec2
+    35672    unsigned-byte ;bool-vec3
+    35673    unsigned-byte ;bool-vec4
+
+    5126     float ;float
+    35664    float ;float-vec2
+    35665    float ;float-vec3
+    35666    float ;float-vec4
+
+    5124     short ;int
+    35667    short ;int-vec2
+    35668    short ;int-vec3
+    35669    short ;int-vec4
+
+    35674    float ;float-mat2
+    35675    float ;float-mat3
+    35676    float ;float-mat4
+
+    float
+    ))
+
 (defn set-attribute!
   "Sets an attribute on an ezglib shader. Shader must be in use."
-  [gl shader location {:keys [buffer normalized? stride offset type components-per-vertex] :as opts}]
+  [gl shader location {:keys [buffer normalized? stride type offset components-per-vertex] :as opts}]
   (let [program (:program shader)
         loc (location (:attributes shader))]
     (.bindBuffer gl array-buffer buffer)
@@ -728,7 +754,7 @@
      gl
      loc
      (or components-per-vertex (.-itemSize buffer) 3)
-     (or type float)
+     (or type (vertex-type shader location))
      (or normalized? false)
      (or stride 0)
      (or offset 0))
@@ -832,7 +858,7 @@
 (defn draw!
   "Draws to the gl context."
   [gl & {:keys [uniforms attributes textures shader draw-mode first count
-                blending? blend-src blend-dest capabilities element-array] :as opts}]
+                blending? blend-src blend-dest capabilities element-buffer element-offset] :as opts}]
 
   (use-shader! gl shader :uniforms uniforms :attributes attributes :textures textures)
 
@@ -843,10 +869,10 @@
     (set-capability! gl blend true)
     (blend-func! gl blend-src blend-dest))
 
-  (if (nil? element-array)
+  (if (nil? element-buffer)
     (.drawArrays gl draw-mode (or first 0) count)
     (do
-      (.bindBuffer gl element-array-buffer (:buffer element-array))
-      (.drawElements gl draw-mode count (.-dataType (:buffer element-array)) (:offset element-array))))
+      (.bindBuffer gl element-array-buffer element-buffer)
+      (.drawElements gl draw-mode count (.-dataType element-buffer) (or element-offset 0))))
 
   gl)
