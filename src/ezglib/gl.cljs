@@ -3,14 +3,9 @@
             [ezglib.util :as util]))
 
 ;;;;; CONSTANTS ;;;;;
-; gl.BYTE is gl-byte
-; gl.FLOAT is gl-float
-; gl.INT is gl-int
-; gl.KEEP is gl-keep
-; gl.REPEAT is gl-repeat
-; gl.REPLACE is gl-replace
-; gl.SHORT is gl-short
-; All other constants the same as the javascript versions except lowercase with dashes.
+
+; All WebGL constants are the same as the javascript versions
+; except lowercase and with dashes, clojure style.
 ; For example, gl.ARRAY_BUFFER becomes array-buffer.
 
 (def active-attributes 35721)
@@ -44,7 +39,7 @@
 (def browser-default-webgl 37444)
 (def buffer-size 34660)
 (def buffer-usage 34661)
-(def gl-byte 5120)
+(def byte 5120)
 (def ccw 2305)
 (def clamp-to-edge 33071)
 (def color-attachment0 36064)
@@ -85,7 +80,7 @@
 (def element-array-buffer-binding 34965)
 (def equal 514)
 (def fastest 4353)
-(def gl-float 5126)
+(def float 5126)
 (def float-mat2 35674)
 (def float-mat3 35675)
 (def float-mat4 35676)
@@ -119,7 +114,7 @@
 (def incr 7682)
 (def incr-wrap 34055)
 (def info-log-length 35716)
-(def gl-int 5124)
+(def int 5124)
 (def int-vec2 35667)
 (def int-vec3 35668)
 (def int-vec4 35669)
@@ -128,7 +123,7 @@
 (def invalid-operation 1282)
 (def invalid-value 1281)
 (def invert 5386)
-(def gl-keep 7680)
+(def keep 7680)
 (def lequal 515)
 (def less 513)
 (def linear 9729)
@@ -192,8 +187,8 @@
 (def renderbuffer-stencil-size 36181)
 (def renderbuffer-width 36162)
 (def renderer 7937)
-(def gl-repeat 10497)
-(def gl-replace 7681)
+(def repeat 10497)
+(def replace 7681)
 (def rgb 6407)
 (def rgb5-a1 32855)
 (def rgb565 36194)
@@ -213,7 +208,7 @@
 (def shader-source-length 35720)
 (def shader-type 35663)
 (def shading-language-version 35724)
-(def gl-short 5122)
+(def short 5122)
 (def src-alpha 770)
 (def src-alpha-saturate 776)
 (def src-color 768)
@@ -389,14 +384,14 @@
   [value]
   (let [value-type (type value)]
     (or
-     (if (= value-type js/Int8Array) gl-byte)
+     (if (= value-type js/Int8Array) byte)
      (if (= value-type js/Uint8Array) unsigned-byte)
      (if (= value-type js/Uint8ClampedArray) unsigned-byte)
-     (if (= value-type js/Int16Array) gl-short)
+     (if (= value-type js/Int16Array) short)
      (if (= value-type js/Uint16Array) unsigned-short)
-     (if (= value-type js/Int32Array) gl-int)
+     (if (= value-type js/Int32Array) int)
      (if (= value-type js/Uint32Array) unsigned-int)
-     (if (= value-type js/Float32Array) gl-float)
+     (if (= value-type js/Float32Array) float)
      (if (= value-type js/Float64Array) high-float))))
 
 ;;;;; CONTEXT ;;;;;
@@ -752,8 +747,8 @@
       (case t
 
         35670    (.uniform1i gl loc v) ;bool
-        5126     (.uniform1f gl loc v) ;gl-float
-        5124     (.uniform1i gl loc v) ;gl-int
+        5126     (.uniform1f gl loc v) ;float
+        5124     (.uniform1i gl loc v) ;int
 
         35678    (.uniform1i gl loc v) ;sampler-2d
         35680    (.uniform1i gl loc v) ;sampler-cube
@@ -767,12 +762,12 @@
         35672    (.uniform3iv gl loc v) ;bool-vec3
         35673    (.uniform4iv gl loc v) ;bool-vec4
 
-        5126     (.uniform1fv gl loc v) ;gl-float
+        5126     (.uniform1fv gl loc v) ;float
         35664    (.uniform2fv gl loc v) ;float-vec2
         35665    (.uniform3fv gl loc v) ;float-vec3
         35666    (.uniform4fv gl loc v) ;float-vec4
 
-        5124     (.uniform1iv gl loc v) ;gl-int
+        5124     (.uniform1iv gl loc v) ;int
         35667    (.uniform2iv gl loc v) ;int-vec2
         35668    (.uniform3iv gl loc v) ;int-vec3
         35669    (.uniform4iv gl loc v) ;int-vec4
@@ -798,7 +793,7 @@
      gl
      loc
      (or components-per-vertex (.-itemSize buffer) 3)
-     (or type gl-float)
+     (or type float)
      (or normalized? false)
      (or stride 0)
      (or offset 0))
