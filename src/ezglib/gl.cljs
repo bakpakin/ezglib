@@ -461,12 +461,13 @@
 ;;;;; TEXTURE ;;;;;
 
 (defn- handle-tex-loaded
-  [gl image tex]
+  [gl image tex min-filter mag-filter mipmap?]
   (.bindTexture gl texture-2d tex)
   (.texImage2D gl texture-2d 0 rgba rgba unsigned-byte image)
-  (.texParameteri gl texture-2d texture-mag-filter linear)
-  (.texParameteri gl texture-2d texture-min-filter linear-mipmap-nearest)
-  (.generateMipmap gl texture-2d)
+  (.texParameteri gl texture-2d texture-mag-filter min-filter)
+  (.texParameteri gl texture-2d texture-min-filter mag-filter)
+  (when mipmap?
+    (.generateMipmap gl texture-2d))
   (.bindTexture gl texture-2d nil))
 
 (defn- is-tex-loaded?
@@ -475,7 +476,7 @@
 
 (defn- load-texture
   "Loads a texture."
-  [game url]
+  ([game url min-filter mag-filter mipmap?]
   (let [gl (:gl game)
         tex (.createTexture gl)
         image (js/Image.)
@@ -483,9 +484,13 @@
     (set! (.-src image)  url)
     (set! (.-crossOrigin image) "anonymous")
     (set! (.-onload image) (fn []
-                             (handle-tex-loaded (:gl game) image tex)
+                             (handle-tex-loaded (:gl game) image tex min-filter mag-filter mipmap?)
                              (reset! atm true)))
     [tex atm]))
+  ([game url min-filter mag-filter]
+   (load-texture game url min-filter mag-filter false))
+  ([game url]
+   (load-texture game url linear linear false)))
 
 (defn- free-texture
   "Frees a loaded texture"

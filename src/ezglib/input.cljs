@@ -178,3 +178,7 @@
 (aset js/window "onkeyup" (fn [ev]
                             (let [k (event-key ev)]
                               (swap! releasedkeys assoc k ev))))
+
+;;;;; GLOBAL MOUSE SETUP ;;;;;
+
+

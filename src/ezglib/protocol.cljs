@@ -12,5 +12,5 @@
 (defprotocol ICamera
   (-matrix [this]))
 
-(defprotocol IGraph
+(defprotocol IDrawable
   (-draw! [this camera]))
