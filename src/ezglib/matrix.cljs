@@ -1,6 +1,6 @@
 (ns ezglib.matrix
   (:require [clojure.string :as string]
-            [ezglib.render.gl :as gl]))
+            [ezglib.gl :as gl]))
 
 ;;;;; DEFTYPE ;;;;;
 

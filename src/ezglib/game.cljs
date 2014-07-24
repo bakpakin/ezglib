@@ -3,7 +3,7 @@
             [ezglib.sound :as sound]
             [ezglib.input :as input]
             [ezglib.asset :as asset]
-            [ezglib.render.gl :as gl]))
+            [ezglib.gl :as gl]))
 
 ;;;;; Mode Functions ;;;;;
 

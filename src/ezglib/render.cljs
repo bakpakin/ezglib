@@ -1,5 +1,5 @@
-(ns ezglib.render.scene2d
-  (:require [ezglib.render.gl :as gl]
+(ns ezglib.render
+  (:require [ezglib.gl :as gl]
             [ezglib.util :as util]
             [ezglib.asset :as asset]
             [ezglib.matrix :as m]))
@@ -10,7 +10,7 @@
   (-matrix [this]))
 
 (defprotocol IGraph
-  (-draw! [this]))
+  (-draw! [this camera]))
 
 (defn graph
   "Creates a new 2d scene graph."
@@ -55,6 +55,7 @@
   [graph]
   (let [{:keys [gl texture-shader color-shader vertex-buffer element-buffer uv-buffer]} graph]
     (gl/clear-color gl 0.3 0.8 0.8 1.0)
+    (gl/reset-viewport! gl)
     (gl/draw! gl
               :shader texture-shader
               :draw-mode gl/triangles

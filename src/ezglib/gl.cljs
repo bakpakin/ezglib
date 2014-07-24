@@ -1,4 +1,4 @@
-(ns ezglib.render.gl
+(ns ezglib.gl
   (:require [ezglib.asset :as asset]
             [ezglib.util :as util]))
 
@@ -406,12 +406,13 @@
   [canvas]
   (if-let [gl (or (.getContext canvas "webgl") (.getContext canvas "experimental-webgl"))]
     (do
-      (.viewport gl 0 0 (.-width canvas) (.-height canvas))
+      (.viewport gl 0 0 (.-drawingBufferWidth gl) (.-drawingBufferHeight gl))
       (.enable gl depth-test)
       (.clearColor gl 0.0 0.0 0.0 1.0)
       (.enable gl depth-test)
       (.enable gl blend)
       (.depthFunc gl lequal)
+      (set! (.-currentShader gl) nil)
       gl)
     (do
       (util/log "Unable to load webgl context. Your browser may not support it.")
@@ -697,6 +698,11 @@
      :uniform-types @uniform-types
      :attribute-types @attribute-types}))
 
+(defn current-shader
+  "Gets the ezglib shader currently bound to the gl context."
+  [gl]
+  (.-currentShader gl))
+
 (defn make-shader
   "Creates a ezglib shader from fragment and vertex shader source."
   [gl frag vert]
@@ -801,7 +807,15 @@
 (defn use-shader!
   "Sets the context to use an ezglib shader."
   [gl shader & {:keys [uniforms attributes textures] :as opts}]
+
+  (when-let [cs (current-shader gl)]
+    (doseq [[_ loc] (:attributes cs)]
+      (.disableVertexAttribArray gl loc)))
+
   (.useProgram gl (:program shader))
+
+  (set! (.-currentShader gl) shader)
+
   (when opts
 
     (when textures
@@ -883,12 +897,6 @@
   [gl & {:keys [uniforms attributes textures shader draw-mode first count
                 blending? blend-src blend-dest capabilities element-array viewport] :as opts}]
 
-  (set-viewport! gl (or viewport
-                               {:x      0,
-                                :y      0,
-                                :width  (context-width gl),
-                                :height (context-height gl)}))
-
   (use-shader! gl shader :uniforms uniforms :attributes attributes :textures textures)
 
   (doseq [[capability enabled?] (merge default-capabilities capabilities)]
@@ -899,8 +907,5 @@
     (do
       (.bindBuffer gl element-array-buffer (:buffer element-array))
       (.drawElements gl draw-mode count (.-dataType (:buffer element-array)) (:offset element-array))))
-
-  (doseq [[a _] attributes]
-    (.disableVertexAttribArray gl ((:attributes shader) a)))
 
   gl)
