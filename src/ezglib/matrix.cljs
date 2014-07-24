@@ -127,34 +127,16 @@
 ;Shamelessly stolen from gluPerspective. See http://www.opengl.org/wiki/GluPerspective_code
 (defn perspective
   "Constructs a perspective projection matrix."
-  ([left right bottom top z-near z-far]
-   (let [tmp (* 2)
-         tmp2 (- right left)
-         tmp3 (- top bottom)
-         tmp4 (- z-far z-near)]
-      (Matrix.
-       [[(/ tmp tmp2)
-         0
-         0
-         0]
-        [0
-         (/ tmp tmp3)
-         0
-         0]
-        [(/ (+ right left) tmp2)
-         (/ (+ top bottom) tmp3)
-         (/ (+ z-near z-far) tmp4 -1)
-         -1]
-        [0
-         0
-         (/ (* tmp z-far -1) tmp4)
-         0]]
-       4
-       4)))
-  ([fov aspect z-near z-far]
-   (let [ymax (* z-near (.tan js/Math (/ (* fov (.-PI js/Math)) 360)))
-         xmax (* ymax aspect)]
-     (perspective (- xmax) xmax (- ymax) ymax z-near z-far))))
+  [fov aspect z-near z-far]
+  (let [uh (/ (.tan js/Math (* 0.5 fov deg-to-rad)))
+        uw (/ uh aspect)]
+    (Matrix.
+     [[uw 0 0 0]
+      [0 uh 0 0]
+      [0 0 (/ z-far (- z-far z-near)) 1]
+      [0 0 (/ (* z-far z-near -1) (- z-far z-near)) 0]]
+     4
+     4)))
 
 (defn ortho
   "Constructs an orthographic projection matrix."

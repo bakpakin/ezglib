@@ -870,8 +870,8 @@
 (def ^:private default-capabilities
   {blend                    false
    cull-face                false
-   depth-test               false
-   dither                   true
+   depth-test               true
+   dither                   false
    polygon-offset-fill      false
    sample-alpha-to-coverage false
    sample-coverage          false
