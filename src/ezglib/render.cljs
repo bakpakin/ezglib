@@ -2,20 +2,13 @@
   (:require [ezglib.gl :as gl]
             [ezglib.util :as util]
             [ezglib.asset :as asset]
-            [ezglib.matrix :as m]))
-
-;;;;; PROTOCOLS ;;;;;
-
-(defprotocol ICamera
-  (-matrix [this]))
-
-(defprotocol IGraph
-  (-draw! [this camera]))
+            [ezglib.matrix :as m]
+            [ezglib.protocol :as p]))
 
 ;;;;; CAMERAS ;;;;;
 
 (deftype Camera2D [x y hw hh angle]
-  ICamera
+  p/ICamera
   (-matrix [_] (m/mult
                 (m/ortho (- x hw) (+ x hw) (- y hh) (+ y hh) -1000000 1000000)
                 (m/rotate-z angle))))
@@ -37,7 +30,7 @@
    :color-shader (gl/color-shader gl)
    :vertex-buffer (gl/buffer
                    :gl gl
-                   :data (gl/float32 [1.0 1.0 1.0
+                   :data (util/float32 [1.0 1.0 1.0
                                       -1.0 1.0 1.0
                                       1.0 -1.0 1.0
                                       -1.0 -1.0 1.0
@@ -48,7 +41,7 @@
                    :item-size 3)
    :uv-buffer (gl/buffer
                :gl gl
-               :data (gl/float32 [0.0 0.0
+               :data (util/float32 [0.0 0.0
                                   0.0 1.0
                                   1.0 0.0
                                   1.0 1.0
@@ -60,7 +53,7 @@
    :element-buffer (gl/buffer
                     :gl gl
                     :target gl/element-array-buffer
-                    :data (gl/uint16 [0 1 2 1 2 3
+                    :data (util/uint16 [0 1 2 1 2 3
                                       4 5 6 5 6 7
                                       0 1 4 1 4 5
                                       0 2 4 2 4 6
@@ -86,7 +79,7 @@
               {0 (asset/asset "star")}
 
               :uniforms
-              {:color (gl/float32 [1.0 1.0 1.0 1.0])
+              {:color (util/float32 [1.0 1.0 1.0 1.0])
                :tDiffuse 0
                :projectionMatrix (m/perspective 90 (/ 4 3) 0.01 100)
                :modelViewMatrix (m/mult

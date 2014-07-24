@@ -1,6 +1,7 @@
 (ns ezglib.matrix
   (:require [clojure.string :as string]
-            [ezglib.gl :as gl]))
+            [ezglib.util :as util]
+            [ezglib.protocol :as p]))
 
 ;;;;; DEFTYPE ;;;;;
 
@@ -28,9 +29,9 @@
   (-seq [_]
         (flatten elements))
 
-  gl/ITypedArray
+  p/ITypedArray
   (-typed-array [_]
-                (gl/float32 (flatten elements))))
+                (util/float32 (flatten elements))))
 
 ;;;;; FUNCTIONS ;;;;;
 
