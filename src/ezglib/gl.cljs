@@ -840,8 +840,8 @@
     (set-capability! gl capability enabled?))
 
   (when blending?
-    (set-capability! blend true)
-    (blend-func! blend-src blend-dest))
+    (set-capability! gl blend true)
+    (blend-func! gl blend-src blend-dest))
 
   (if (nil? element-array)
     (.drawArrays gl draw-mode (or first 0) count)
