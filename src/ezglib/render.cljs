@@ -12,6 +12,23 @@
 (defprotocol IGraph
   (-draw! [this camera]))
 
+;;;;; CAMERAS ;;;;;
+
+(deftype Camera2D [x y hw hh angle]
+  ICamera
+  (-matrix [_] (m/mult
+                (m/ortho (- x hw) (+ x hw) (- y hh) (+ y hh) -1000000 1000000)
+                (m/rotate-z angle))))
+
+(defn camera-2d
+  "Constructs a 2D camera."
+  ([x y hw hh]
+   (Camera2D. x y hw hh 0))
+  ([x y hw hh angle]
+   (Camera2D. x y hw hh angle)))
+
+;;;;; GRAPHS ;;;;;
+
 (defn graph
   "Creates a new 2d scene graph."
   [gl]
