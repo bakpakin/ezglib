@@ -1,5 +1,19 @@
 (ns ezglib.protocol)
 
+;;;;; MATH ;;;;;
+
+(defprotocol IAdd
+  (-add [this other]))
+
+(defprotocol IMultiply
+  (-multiply [this other]))
+
+(defprotocol ISubtract
+  (-subtract [this other]))
+
+(defprotocol IDivide
+  (-divide [this other]))
+
 ;;;;; GL ;;;;;
 
 (defprotocol ITypedArray

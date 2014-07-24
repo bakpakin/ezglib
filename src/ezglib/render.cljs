@@ -2,7 +2,7 @@
   (:require [ezglib.gl :as gl]
             [ezglib.util :as util]
             [ezglib.asset :as asset]
-            [ezglib.matrix :as m]
+            [ezglib.math :as m]
             [ezglib.protocol :as p]))
 
 ;;;;; CAMERAS ;;;;;
@@ -80,10 +80,14 @@
               :uniforms
               {:color (util/float32 [1.0 1.0 1.0 1.0])
                :tDiffuse 0
-               :projectionMatrix (m/perspective 90 (/ 4 3) 0.01 100)
-               :modelViewMatrix (m/mult
-                                 (m/rotate-y (/ (util/now) 20))
-                                 (m/rotate-x (/ (util/now) 70))
-                                 (m/translate 0 0 5))}
+               :projectionMatrix (m/m-perspective 90 (/ 4 3) 0.01 100)
+               :modelViewMatrix (m/*
+                                 (m/m-rotate-y (/ (util/now) 20))
+                                 (m/m-rotate-x (/ (util/now) 70))
+                                 (m/m-translate 0 0 5))}
 
               :element-buffer element-buffer)))
+
+(util/log (m/* (m/v 1 2 3) (m/v 4 5 6) (m/v 7 8 9)))
+
+(util/log (m/v-cross (m/v 1 2 3) (m/v 4 5 6)))
