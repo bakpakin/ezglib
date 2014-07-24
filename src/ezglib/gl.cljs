@@ -341,6 +341,7 @@
       (.enable gl depth-test)
       (.enable gl blend)
       (.depthFunc gl lequal)
+      (.blendFunc gl src-alpha one-minus-src-alpha)
       (set! (.-currentShader gl) nil)
       gl)
     (do
@@ -759,40 +760,47 @@
       (doseq [[loc opts] attributes]
         (set-attribute! gl shader loc opts)))))
 
+;;;;; BLEND ;;;;;
+
+(defn blend-func!
+  "Sets the gl context to use the given blend function."
+  [gl src dest]
+  (.blendFunc gl src dest))
+
 ;;;;; DRAW ;;;;;
 
-(defn clear
+(defn clear!
   "Clears the gl context."
   [gl]
   (.clear gl (bit-or color-buffer-bit depth-buffer-bit stencil-buffer-bit))
   gl)
 
-(defn clear-depth
+(defn clear-depth!
   "Clears the depth buffer of the gl context."
   ([gl depth]
    (.clearDepth gl depth)
    (.clear gl depth-buffer-bit)
    gl)
   ([gl]
-   (clear-depth gl 0)))
+   (clear-depth! gl 0)))
 
-(defn clear-color
+(defn clear-color!
   "Clears the color buffer of the gl context."
   ([gl r g b a]
    (.clearColor gl r g b a)
    (.clear gl color-buffer-bit)
    gl)
   ([gl]
-   (clear-color gl 0.0 0.0 0.0 1.0)))
+   (clear-color! gl 0.0 0.0 0.0 1.0)))
 
-(defn clear-stencil
+(defn clear-stencil!
   "Clears the stencil buffer of the gl context."
   ([gl index]
    (.clearStencil gl index)
    (.clear gl stencil-buffer-bit)
    gl)
   ([gl]
-   (clear-stencil gl 0)))
+   (clear-stencil! gl 0)))
 
 (defn draw-arrays!
   "Draws arrays to gl context."
@@ -811,10 +819,10 @@
    gl))
 
 (def ^:private default-capabilities
-  {blend                    false
+  {blend                    true
    cull-face                false
    depth-test               true
-   dither                   false
+   dither                   true
    polygon-offset-fill      false
    sample-alpha-to-coverage false
    sample-coverage          false
@@ -824,12 +832,16 @@
 (defn draw!
   "Draws to the gl context."
   [gl & {:keys [uniforms attributes textures shader draw-mode first count
-                blending? blend-src blend-dest capabilities element-array viewport] :as opts}]
+                blending? blend-src blend-dest capabilities element-array] :as opts}]
 
   (use-shader! gl shader :uniforms uniforms :attributes attributes :textures textures)
 
   (doseq [[capability enabled?] (merge default-capabilities capabilities)]
     (set-capability! gl capability enabled?))
+
+  (when blending?
+    (set-capability! blend true)
+    (blend-func! blend-src blend-dest))
 
   (if (nil? element-array)
     (.drawArrays gl draw-mode (or first 0) count)

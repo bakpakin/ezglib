@@ -95,8 +95,9 @@
       (set! (.-id c) game-id))
     (set! (.-width c) width)
     (set! (.-height c) height)
+    (gl/reset-viewport! (:gl g))
     (input/init! g)
-    (gl/clear (:gl g))
+    (gl/clear! (:gl g))
     (when assets
       (asset/load!
         :game g

@@ -64,8 +64,7 @@
   "Draws the scenegraph."
   [graph]
   (let [{:keys [gl texture-shader color-shader vertex-buffer element-buffer uv-buffer]} graph]
-    (gl/clear-color gl 0.3 0.8 0.8 1.0)
-    (gl/reset-viewport! gl)
+    (gl/clear-color! gl 0.3 0.8 0.8 1.0)
     (gl/draw! gl
               :shader texture-shader
               :draw-mode gl/triangles
