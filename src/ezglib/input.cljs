@@ -1,6 +1,8 @@
 (ns ezglib.input
   (:require [ezglib.event :as event]))
 
+;;;;; KEYBOARD ;;;;;
+
 (def downkeys (atom {}))
 
 (def pressedkeys (atom {}))
@@ -162,23 +164,54 @@
   (reset! pressedkeys {})
   (reset! releasedkeys {}))
 
+;;;;; GLOBAL KEYBOARD SETUP ;;;;;
+
+(.addEventListener js/window "keydown" (fn [ev]
+                                         (let [k (event-key ev)]
+                                           (when (not (contains? @downkeys k))
+                                             (swap! pressedkeys assoc k ev)
+                                             (swap! downkeys assoc k ev)))))
+(.addEventListener js/window "keyup" (fn [ev]
+                                       (let [k (event-key ev)]
+                                         (swap! releasedkeys assoc k ev))))
+
+;;;;; MOUSE ;;;;;
+
+(def ^:private mouse-position (atom [0 0]))
+
+(defn mouse-global-pos
+  "Gets the global mouse position in the browser. Not recommended for most use."
+  []
+  @mouse-position)
+
+(defn mouse-pos
+  "Gets the current mouse position in the form [x y]."
+  [game]
+  (let [rect (.getBoundingClientRect (:canvas game))
+        [gx gy] @mouse-position]
+    [(- gx (.-left rect)) (- gy (.-top rect))]))
+
+
+(defn mouse-x
+  "Gets the current mouse x coordinate."
+  [game]
+  ((mouse-pos game) 0))
+
+(defn mouse-y
+  "Gets the current mouse y coordinate."
+  [game]
+  ((mouse-pos game) 1))
+
+;;;;; GLOBAL MOUSE SETUP ;;;;;
+
+(.addEventListener js/window "mousemove" (fn [e]
+                                           (reset!
+                                            mouse-position
+                                            [(.-clientX e) (.-clientY e)])))
+
+;;;;; INIT ;;;;;
+
 (defn init!
   "Initializes the input."
   [game]
   (aset (:canvas game) "onclick" (fn [ev] (event/enqueue-event! game :click ev))))
-
-
-;;;;; GLOBAL KEYBOARD SETUP ;;;;;
-
-(aset js/window "onkeydown" (fn [ev]
-                              (let [k (event-key ev)]
-                                (when (not (contains? @downkeys k))
-                                  (swap! pressedkeys assoc k ev)
-                                  (swap! downkeys assoc k ev)))))
-(aset js/window "onkeyup" (fn [ev]
-                            (let [k (event-key ev)]
-                              (swap! releasedkeys assoc k ev))))
-
-;;;;; GLOBAL MOUSE SETUP ;;;;;
-
-
