@@ -20,6 +20,12 @@
   ([x y hw hh angle]
    (Camera2D. x y hw hh angle)))
 
+;;;;; SPRITE ;;;;;
+
+(defn load-sprite
+  "Loads a sprite."
+  [game ])
+
 ;;;;; GRAPHS ;;;;;
 
 (defn graph
@@ -87,7 +93,3 @@
                                  (m/m-translate 0 0 5))}
 
               :element-buffer element-buffer)))
-
-(util/log (m/* (m/v 1 2 3) (m/v 4 5 6) (m/v 7 8 9)))
-
-(util/log (m/v-cross (m/v 1 2 3) (m/v 4 5 6)))

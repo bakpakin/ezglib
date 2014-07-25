@@ -62,12 +62,14 @@
      (= value-type js/Float32Array)
      (= value-type js/Float64Array))))
 
-;;;;; CONSOLE ;;;;;
+;;;;; LOGGING ;;;;;
+
+(def ^:dynamic *log-fn* (fn [& messages] (.log js/console (apply str messages))))
 
 (defn log
-  "Logs messages to the console."
+  "Logs messages."
   [& messages]
-  (.log js/console (apply str messages)))
+  (apply *log-fn* messages))
 
 ;;;;; TIME ;;;;;
 

@@ -326,7 +326,7 @@
      (if (= value-type js/Int32Array) int)
      (if (= value-type js/Uint32Array) unsigned-int)
      (if (= value-type js/Float32Array) float)
-     (if (= value-type js/Float64Array) high-float))))
+     (if (= value-type js/Float64Array) nil))))
 
 ;;;;; CONTEXT ;;;;;
 
@@ -460,33 +460,75 @@
 
 ;;;;; TEXTURE ;;;;;
 
+(def ^:private image-canvas (.createElement js/document "canvas"))
+
+(defn- power-of-two?
+  [x]
+  (= 0 (bit-and x (dec x))))
+
+(defn- next-power-of-two
+  [x]
+  (cond
+   (> x 4096) 8192
+   (> x 2048) 4096
+   (> x 1024) 2048
+   (> x 512) 1024
+   (> x 256) 512
+   (> x 128) 256
+   (> x 64) 128
+   (> x 32) 64
+   (> x 16) 32
+   (> x 8) 16
+   (> x 4) 8
+   (> x 2) 4
+   (> x 1) 2
+   :default 1))
+
+(defn- make-power-of-two
+  [img]
+  (if (and (power-of-two? (.-width img)) (power-of-two? (.-height img)))
+    img
+    (let [c (.getContext image-canvas "2d")
+          pt (next-power-of-two (max (.-height img) (.-width img)))]
+      (set! (.-width image-canvas) pt)
+      (set! (.-height image-canvas) pt)
+      (.clearRect c 0 0 (.-width image-canvas) (.-height image-canvas))
+      (.drawImage c img 0 0 (.-width img) (.-height img))
+      image-canvas)))
+
 (defn- handle-tex-loaded
   [gl image tex min-filter mag-filter mipmap?]
-  (.bindTexture gl texture-2d tex)
-  (.texImage2D gl texture-2d 0 rgba rgba unsigned-byte image)
-  (.texParameteri gl texture-2d texture-mag-filter min-filter)
-  (.texParameteri gl texture-2d texture-min-filter mag-filter)
-  (when mipmap?
-    (.generateMipmap gl texture-2d))
-  (.bindTexture gl texture-2d nil))
+  (let [iw (.-width image)
+        ih (.-height image)
+        new-image (make-power-of-two image)]
+    (.bindTexture gl texture-2d tex)
+    (.texImage2D gl texture-2d 0 rgba rgba unsigned-byte new-image)
+    (.texParameteri gl texture-2d texture-mag-filter min-filter)
+    (.texParameteri gl texture-2d texture-min-filter mag-filter)
+    (when mipmap?
+      (.generateMipmap gl texture-2d))
+    (.bindTexture gl texture-2d nil)
+    (set! (.-loaded tex) true)
+    (set! (.-imageWidth tex) iw)
+    (set! (.-imageHeight tex) ih)
+    (set! (.-uvWidth tex) (/ iw (.-width new-image)))
+    (set! (.-uvHeight tex) (/ ih (.-height new-image)))))
 
 (defn- is-tex-loaded?
-  [game [tex atm]]
-  (when @atm tex))
+  [game tex]
+  (when (.-loaded tex) tex))
 
-(defn- load-texture
+(defn load-texture
   "Loads a texture."
   ([game url min-filter mag-filter mipmap?]
   (let [gl (:gl game)
         tex (.createTexture gl)
-        image (js/Image.)
-        atm (atom false)]
+        image (js/Image.)]
     (set! (.-src image)  url)
     (set! (.-crossOrigin image) "anonymous")
     (set! (.-onload image) (fn []
-                             (handle-tex-loaded (:gl game) image tex min-filter mag-filter mipmap?)
-                             (reset! atm true)))
-    [tex atm]))
+                             (handle-tex-loaded (:gl game) image tex min-filter mag-filter mipmap?)))
+    tex))
   ([game url min-filter mag-filter]
    (load-texture game url min-filter mag-filter false))
   ([game url]
@@ -502,6 +544,36 @@
  :load-fn load-texture
  :is-done? is-tex-loaded?
  :free-fn free-texture)
+
+(defn texture-width
+  "Returns the width, in texels, of the texture."
+  [tex]
+  (.-imageWidth tex))
+
+(defn texture-height
+  "Returns the height, in texels, of the texture."
+  [tex]
+  (.-imageHeight tex))
+
+(defn texture-size
+  "Returns the size of the texture, in texels, as [width height]."
+  [tex]
+  [(.-imageWidth tex) (.-imageHeight tex)])
+
+(defn texture-uv-width
+  "Returns the width of the texture as a number between 0 and 1."
+  [tex]
+  (.-uvWidth tex))
+
+(defn texture-uv-height
+  "Returns the width of the texture as a number between 0 and 1."
+  [tex]
+  (.-uvHeight tex))
+
+(defn texture-uv-size
+  "Returns the uv size of the texture as [width height]."
+  [tex]
+  [(.-uvWidth tex) (.-uvHeight tex)])
 
 (defn bind-texture!
   "Binds the texture to the context to be used by an ezglib shader."
