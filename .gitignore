@@ -3,6 +3,7 @@
 /.DS_Store
 /classes
 /target/*
+target
 pom.xml
 pom.asc.xml
 .repl
