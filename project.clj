@@ -12,10 +12,6 @@
   :source-paths ["src"]
   :cljsbuild {
     :builds {
-      :src {
-        :jar true
-        :source-paths ["src"]
-        :incremental? true}
       :examples {
         :incremental? true
         :source-paths ["src" "examples/src"]
