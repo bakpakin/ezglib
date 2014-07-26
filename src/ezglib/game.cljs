@@ -3,7 +3,8 @@
             [ezglib.sound :as sound]
             [ezglib.input :as input]
             [ezglib.asset :as asset]
-            [ezglib.gl :as gl]))
+            [ezglib.gl :as gl]
+            [ezglib.render :as render]))
 
 ;;;;; Mode Functions ;;;;;
 
@@ -77,7 +78,7 @@
   element in which the game is injected. game-id is
   the id of the game element."
   [& {:keys [width height element element-id game-id modes mode canvas
-             assets on-load load-update start-on-load?] :as args}]
+             assets on-load load-update start-on-load? preload] :as args}]
   (let [e (if-let [tmp (.getElementById js/document element-id)] tmp (.-body js/document))
         c (.createElement js/document "canvas")
         g {:modes (atom (or modes {:default (mode)}))
@@ -98,6 +99,7 @@
     (gl/reset-viewport! (:gl g))
     (input/init! g)
     (gl/clear! (:gl g))
+    (when preload (preload g))
     (when assets
       (asset/load!
         :game g

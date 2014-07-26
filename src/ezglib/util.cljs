@@ -77,3 +77,12 @@
   "Gets the current time in milliseconds."
   []
   (.getTime (js/Date.)))
+
+;;;;; PATH ;;;;;
+
+(def ^:private extension-matcher #"(\w+)$")
+
+(defn file-extension
+  "Gets the file extension of the path not including the period."
+  [path]
+  (last (re-find extension-matcher path)))

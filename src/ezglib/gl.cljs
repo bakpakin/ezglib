@@ -1,6 +1,5 @@
 (ns ezglib.gl
-  (:require [ezglib.asset :as asset]
-            [ezglib.util :as util]
+  (:require [ezglib.util :as util]
             [ezglib.protocol :as p]))
 
 ;;;;; CONSTANTS ;;;;;
@@ -337,7 +336,7 @@
     (do
       (.viewport gl 0 0 (.-drawingBufferWidth gl) (.-drawingBufferHeight gl))
       (.enable gl depth-test)
-      (.clearColor gl 0.0 0.0 0.0 1.0)
+      (.clearColor gl 0.4 0.4 0.4 1.0)
       (.enable gl depth-test)
       (.enable gl blend)
       (.depthFunc gl lequal)
@@ -442,7 +441,7 @@
   :usage (optional) must be either ezglib.render.gl/static-draw (default) or ezglib.render.gl/dynamic-draw.
 
   :item-size (optional)."
-  [& {:keys [gl data target usage item-size] :as args}]
+  [gl & {:keys [data target usage item-size] :as args}]
   (let [buffer (.createBuffer gl)
         target (or target array-buffer)
         usage (or usage static-draw)]
@@ -489,18 +488,21 @@
   (if (and (power-of-two? (.-width img)) (power-of-two? (.-height img)))
     img
     (let [c (.getContext image-canvas "2d")
-          pt (next-power-of-two (max (.-height img) (.-width img)))]
-      (set! (.-width image-canvas) pt)
-      (set! (.-height image-canvas) pt)
+          ptw (next-power-of-two (.-width img))
+          pth (next-power-of-two (.-height img))]
+      (set! (.-width image-canvas) ptw)
+      (set! (.-height image-canvas) pth)
       (.clearRect c 0 0 (.-width image-canvas) (.-height image-canvas))
       (.drawImage c img 0 0 (.-width img) (.-height img))
       image-canvas)))
 
-(defn- handle-tex-loaded
-  [gl image tex min-filter mag-filter mipmap?]
+(defn load-texture
+  "Loads a texture."
+  [gl image min-filter mag-filter mipmap?]
   (let [iw (.-width image)
         ih (.-height image)
-        new-image (make-power-of-two image)]
+        new-image (make-power-of-two image)
+        tex (.createTexture gl)]
     (.bindTexture gl texture-2d tex)
     (.texImage2D gl texture-2d 0 rgba rgba unsigned-byte new-image)
     (.texParameteri gl texture-2d texture-mag-filter min-filter)
@@ -508,42 +510,17 @@
     (when mipmap?
       (.generateMipmap gl texture-2d))
     (.bindTexture gl texture-2d nil)
-    (set! (.-loaded tex) true)
+    (set! (.-gl tex) gl)
     (set! (.-imageWidth tex) iw)
     (set! (.-imageHeight tex) ih)
     (set! (.-uvWidth tex) (/ iw (.-width new-image)))
-    (set! (.-uvHeight tex) (/ ih (.-height new-image)))))
-
-(defn- is-tex-loaded?
-  [game tex]
-  (when (.-loaded tex) tex))
-
-(defn load-texture
-  "Loads a texture."
-  ([game url min-filter mag-filter mipmap?]
-  (let [gl (:gl game)
-        tex (.createTexture gl)
-        image (js/Image.)]
-    (set! (.-src image)  url)
-    (set! (.-crossOrigin image) "anonymous")
-    (set! (.-onload image) (fn []
-                             (handle-tex-loaded (:gl game) image tex min-filter mag-filter mipmap?)))
+    (set! (.-uvHeight tex) (/ ih (.-height new-image)))
     tex))
-  ([game url min-filter mag-filter]
-   (load-texture game url min-filter mag-filter false))
-  ([game url]
-   (load-texture game url linear linear false)))
 
-(defn- free-texture
+(defn free-texture
   "Frees a loaded texture"
-  [game tex]
-  (.deleteTexture (:gl game) tex))
-
-(asset/add-asset
- :asset :texture
- :load-fn load-texture
- :is-done? is-tex-loaded?
- :free-fn free-texture)
+  [gl tex]
+  (.deleteTexture gl tex))
 
 (defn texture-width
   "Returns the width, in texels, of the texture."
@@ -587,50 +564,10 @@
 
 ;;;;; SHADER ;;;;;
 
-(def frag-header
-  "
-  precision mediump float;\n
-  varying vec2 vUv;\n
-  uniform sampler2D tDiffuse;\n
-  uniform sampler2D tNormal;\n
-  uniform vec4 color;\n
-  uniform float time;\n
-  ")
-
-(def color-frag-src
-  "void main(void) {\n
-    gl_FragColor = color;\n
-  }"
-  )
-
-(def texture-frag-src
-  "void main(void) {\n
-    gl_FragColor = color * texture2D(tDiffuse, vUv);\n
-  }"
-  )
-
-(def vert-header
-  "
-  precision mediump float;\n
-  attribute vec3 position;\n
-  attribute vec2 aUv;\n
-  varying vec2 vUv;\n
-  uniform mat4 projectionMatrix;\n
-  uniform mat4 modelViewMatrix;\n
-  uniform float time;\n
-  ")
-
-(def default-vert-src
-  "void main(void) {\n
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n
-    vUv = aUv;\n
-  }"
-  )
-
-(defn- get-shader
+(defn- make-shader
   [gl src frag-vert]
   (let [shader (.createShader gl (case frag-vert :frag fragment-shader :vert vertex-shader))]
-    (.shaderSource gl shader (str (case frag-vert :frag frag-header :vert vert-header) "\n" src))
+    (.shaderSource gl shader src)
     (.compileShader gl shader)
     (if (not (.getShaderParameter gl shader compile-status))
       (do
@@ -638,11 +575,10 @@
         nil)
       shader)))
 
-(defn- load-shader-src
-  "Loads a shader program from vertex and fragment shader."
-  ([gl frag-src vert-src]
-  (let [frag (get-shader gl frag-src :frag)
-        vert (get-shader gl vert-src :vert)
+(defn- make-program
+  [gl frag-src vert-src]
+  (let [frag (make-shader gl frag-src :frag)
+        vert (make-shader gl vert-src :vert)
         prgrm (.createProgram gl)]
     (.attachShader gl prgrm vert)
     (.attachShader gl prgrm frag)
@@ -652,106 +588,59 @@
         (util/log "An error occured while linking the shader.")
         nil)
       prgrm)))
-  ([gl frag-src]
-   (load-shader-src gl frag-src default-vert-src)))
 
-(defn- free-shader
-  "Frees a shader from memory."
-  [game program]
-  (.deleteShader (:gl game) program))
-
-(defn- load-shader
-  "Loads a shader."
-  [game load-type frag vert]
-  (case load-type
-    :string [(atom nil) (atom frag) (atom vert)]
-    :file (let [atm-v (atom nil)
-                atm-f (atom nil)
-                request-v (js/XMLHttpRequest.)
-                request-f (js/XMLHttpRequest.)]
-            (.open request-v "GET" vert true)
-            (.open request-f "GET" frag true)
-            (set! (.-onload request-v) (fn [] (reset! atm-v (aget request-v "response"))))
-            (set! (.-onload request-f) (fn [] (reset! atm-f (aget request-f "response"))))
-            (.send request-v)
-            (.send request-f)
-            [(atom nil) atm-f atm-v])))
-
-(defn- wrap-shader
-  "Wraps a raw WebGl shader with information, such as uniform and attribute locations."
-  [gl shader]
+(defn- wrap-program
+  [gl prgrm]
   (let [attributes (atom {})
         uniforms (atom {})
         attribute-types (atom {})
         uniform-types (atom {})
-        active-uniforms (.getProgramParameter gl shader active-uniforms)
-        active-attributes (.getProgramParameter gl shader active-attributes)]
+        active-uniforms (.getProgramParameter gl prgrm active-uniforms)
+        active-attributes (.getProgramParameter gl prgrm active-attributes)]
     (doseq [i (range active-uniforms)]
-      (let [u (.getActiveUniform gl shader i)
+      (let [u (.getActiveUniform gl prgrm i)
             n (.-name u)
             kn (keyword n)]
-        (swap! uniforms assoc kn (.getUniformLocation gl shader n))
+        (swap! uniforms assoc kn (.getUniformLocation gl prgrm n))
         (swap! uniform-types assoc kn (.-type u))))
     (doseq [i (range active-attributes)]
-        (let [a (.getActiveAttrib gl shader i)
+        (let [a (.getActiveAttrib gl prgrm i)
               n (.-name a)
               kn (keyword n)]
-          (swap! attributes assoc kn (.getAttribLocation gl shader n))
+          (swap! attributes assoc kn (.getAttribLocation gl prgrm n))
           (swap! attribute-types assoc kn (.-type a))))
-    {:program shader
-     :gl gl
-     :uniforms @uniforms
-     :attributes @attributes
-     :uniform-types @uniform-types
-     :attribute-types @attribute-types}))
+    (set! (.-gl prgrm) gl)
+    (set! (.-uniforms prgrm) @uniforms)
+    (set! (.-attributes prgrm) @attributes)
+    (set! (.-uniformTypes prgrm) @uniform-types)
+    (set! (.-attributeTypes prgrm) @attribute-types)
+    prgrm))
+
+(defn load-shader
+  "Loads an ezglib shader from fragment and vertex shader source."
+  [gl frag vert]
+  (wrap-program gl (make-program gl frag vert)))
+
+(defn free-shader
+  "Frees a shader from memory."
+  [gl program]
+  (.deleteShader gl program))
 
 (defn current-shader
   "Gets the ezglib shader currently bound to the gl context."
   [gl]
   (.-currentShader gl))
 
-(defn make-shader
-  "Creates a ezglib shader from fragment and vertex shader source."
-  [gl frag vert]
-  (wrap-shader gl (load-shader-src gl frag vert)))
-
-(defn color-shader
-  "Creates a simple ezglib color shader for a gl context."
-  [gl]
-  (make-shader gl color-frag-src
-  "void main(void) {\n
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n
-  }"))
-
-(defn texture-shader
-  "Creates an ezglib texture shader for a gl context."
-  [gl]
-  (make-shader gl texture-frag-src default-vert-src))
-
-(defn- shader-loaded?
-  "Checks if the shader has loaded. If so, returns the actual program."
-  [game [atm-shdr atm-f atm-v]]
-  (if-let [shdr @atm-shdr]
-    shdr
-    (when (and @atm-f @atm-v)
-      (reset! atm-shdr (wrap-shader (:gl game) (load-shader-src (:gl game) @atm-f @atm-v))))))
-
-(asset/add-asset
- :asset :shader
- :load-fn load-shader
- :is-done? shader-loaded?
- :free-fn free-shader)
-
 (defn set-uniform!
-  "Sets a uniform on an ezglib shader. Shader must be in use.
+  "Sets a uniform on the current ezglib shader.
 
-  value should be a typed array when appropriate.
+  value should be a typed array or a type that extends ezglib.protocol.ITypedArray.
 
   location must be the keyword form of the uniform name."
-  [gl shader location value]
-  (let [program (:program shader)
-        loc (location (:uniforms shader))
-        t (location (:uniform-types shader))
+  [gl location value]
+  (let [program (.-currentShader gl)
+        loc (location (.-uniforms program))
+        t (location (.-uniformTypes program))
         v (if (or (number? value) (util/typed-array? value))
             value
             (p/-typed-array value))]
@@ -796,7 +685,7 @@
 
 (defn- vertex-type
   [shader location]
-  (case (location (:attribute-types shader))
+  (case (location (.-attributeTypes shader))
 
     35670    unsigned-byte ;bool
     35671    unsigned-byte ;bool-vec2
@@ -821,20 +710,37 @@
     ))
 
 (defn set-attribute!
-  "Sets an attribute on an ezglib shader. Shader must be in use."
-  [gl shader location {:keys [buffer normalized? stride type offset components-per-vertex] :as opts}]
-  (let [program (:program shader)
-        loc (location (:attributes shader))]
+  "Sets an attribute on the current ezglib shader."
+  [gl location {:keys [buffer normalized? stride type offset components-per-vertex] :as opts}]
+  (let [program (.-currentShader gl)
+        loc (location (.-attributes program))]
     (.bindBuffer gl array-buffer buffer)
     (.enableVertexAttribArray gl loc)
     (.vertexAttribPointer
      gl
      loc
      (or components-per-vertex (.-itemSize buffer) 3)
-     (or type (vertex-type shader location))
+     (or type (vertex-type program location))
      (or normalized? false)
      (or stride 0)
      (or offset 0))
+    gl))
+
+(defn set-attribute*!
+  "Quickly sets an attribute on the current ezglib shader with default parameters."
+  [gl location buffer]
+  (let [program (.-currentShader gl)
+        loc (location (.-attributes program))]
+    (.bindBuffer gl array-buffer buffer)
+    (.enableVertexAttribArray gl loc)
+    (.vertexAttribPointer
+     gl
+     loc
+     (.-itemSize buffer)
+     (vertex-type program location)
+     false
+     0
+     0)
     gl))
 
 (defn use-shader!
@@ -842,10 +748,10 @@
   [gl shader & {:keys [uniforms attributes textures] :as opts}]
 
   (when-let [cs (current-shader gl)]
-    (doseq [[_ loc] (:attributes cs)]
+    (doseq [[_ loc] (.-attributes cs)]
       (.disableVertexAttribArray gl loc)))
 
-  (.useProgram gl (:program shader))
+  (.useProgram gl shader)
 
   (set! (.-currentShader gl) shader)
 
@@ -857,11 +763,11 @@
 
     (when uniforms
       (doseq [[loc values] uniforms]
-        (set-uniform! gl shader loc values)))
+        (set-uniform! gl loc values)))
 
     (when attributes
       (doseq [[loc opts] attributes]
-        (set-attribute! gl shader loc opts)))))
+        (set-attribute! gl loc opts)))))
 
 ;;;;; BLEND ;;;;;
 

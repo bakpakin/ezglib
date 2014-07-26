@@ -23,11 +23,15 @@
 
 ;;;;; 3D ;;;;;
 
-(defprotocol ICamera
+(defprotocol I3D
   (-matrix [this]))
 
 (defprotocol IDrawable
-  (-draw! [this]))
+  (-draw! [this] "Types that implement -draw should assume
+          That the shader and projection matrix have
+          already been applied. Textures, attributes, and other uniforms may be
+          applied as needed. Implementations should then use ezglib.gl.draw-arrays! or
+          ezglib.gl.draw-elements! to draw to the drawing buffer."))
 
 (defprotocol IPosition
   (-position [this] "Returns the position of the object as [x y z]."))

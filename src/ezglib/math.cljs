@@ -5,7 +5,7 @@
 
 ;;;;; DEFTYPE ;;;;;
 
-(deftype Matrix [elements rows cols]
+(deftype Matrix [elements rows cols ^:mutable ta]
   Object
   (toString [_]
             (string/join
@@ -20,7 +20,11 @@
   ISeqable
   (-seq [_] (flatten elements))
   p/ITypedArray
-  (-typed-array [_] (util/float32 (flatten elements)))
+  (-typed-array [_] (if ta
+                      ta
+                      (do
+                        (set! ta (util/float32 (flatten elements)))
+                        ta)))
   p/IAdd
   (-add
    [a b]
@@ -35,7 +39,8 @@
        (.-elements a)
        (.-elements b))
       (.-rows a)
-      (.-cols a))))
+      (.-cols a)
+      nil)))
   p/ISubtract
   (-subtract
    [a b]
@@ -50,7 +55,8 @@
        (.-elements a)
        (.-elements b))
       (.-rows a)
-      (.-cols a))))
+      (.-cols a)
+      nil)))
   p/IMultiply
   (-multiply
    [a b]
@@ -76,65 +82,78 @@
        (.-elements a)
        (apply mapv vector (.-elements b)))
       (.-rows a)
-      (.-cols b)))))
+      (.-cols b)
+      nil))))
 
-(deftype Vec2 [x y]
+(deftype Vec2 [x y ^:mutable ta]
   Object
   (toString [_] (str "(" x ", " y ")"))
   p/ITypedArray
-  (-typed-array [_] (js/Float32Array. (array x y)))
+  (-typed-array [_] (if ta
+                      ta
+                      (do
+                        (set! ta (js/Float32Array. (array x y)))
+                        ta)))
   p/IAdd
-  (-add [a b] (Vec2. (+ (.-x a) (.-x b)) (+ (.-y a) (.-y b))))
+  (-add [a b] (Vec2. (+ (.-x a) (.-x b)) (+ (.-y a) (.-y b)) nil))
   p/ISubtract
-  (-subtract [a b] (Vec2. (- (.-x a) (.-x b)) (- (.-y a) (.-y b))))
+  (-subtract [a b] (Vec2. (- (.-x a) (.-x b)) (- (.-y a) (.-y b)) nil))
   p/IMultiply
   (-multiply [a b] (if (number? b)
-                     (Vec2. (* (.-x a) b) (* (.-y a) b))
-                     (Vec2. (* (.-x a) (.-x b)) (* (.-y a) (.-y b)))))
+                     (Vec2. (* (.-x a) b) (* (.-y a) b) nil)
+                     (Vec2. (* (.-x a) (.-x b)) (* (.-y a) (.-y b)) nil)))
   p/IDivide
   (-divide [a b] (if (number? b)
-                   (Vec2. (/ (.-x a) b) (/ (.-y a) b))
-                   (Vec2. (/ (.-x a) (.-x b)) (/ (.-y a) (.-y b)))))
+                   (Vec2. (/ (.-x a) b) (/ (.-y a) b) nil)
+                   (Vec2. (/ (.-x a) (.-x b)) (/ (.-y a) (.-y b)) nil)))
   ISeqable
   (-seq [_] (list x y)))
 
-(deftype Vec3 [x y z]
+(deftype Vec3 [x y z ^:mutable ta]
   Object
   (toString [_] (str "(" x ", " y ", " z ")"))
   p/ITypedArray
-  (-typed-array [_] (js/Float32Array. (array x y z)))
+  (-typed-array [_] (if ta
+                      ta
+                      (do
+                        (set! ta (js/Float32Array. (array x y z)))
+                        ta)))
   p/IAdd
-  (-add [a b] (Vec3. (+ (.-x a) (.-x b)) (+ (.-y a) (.-y b)) (+ (.-z a) (.-z b))))
+  (-add [a b] (Vec3. (+ (.-x a) (.-x b)) (+ (.-y a) (.-y b)) (+ (.-z a) (.-z b)) nil))
   p/ISubtract
-  (-subtract [a b] (Vec3. (- (.-x a) (.-x b)) (- (.-y a) (.-y b)) (- (.-z a) (.-z b))))
+  (-subtract [a b] (Vec3. (- (.-x a) (.-x b)) (- (.-y a) (.-y b)) (- (.-z a) (.-z b)) nil))
   p/IMultiply
   (-multiply [a b] (if (number? b)
-                     (Vec3. (* (.-x a) b) (* (.-y a) b) (* (.-z a) b))
-                     (Vec3. (* (.-x a) (.-x b)) (* (.-y a) (.-y b)) (* (.-z a) (.-z b)))))
+                     (Vec3. (* (.-x a) b) (* (.-y a) b) (* (.-z a) b) nil)
+                     (Vec3. (* (.-x a) (.-x b)) (* (.-y a) (.-y b)) (* (.-z a) (.-z b)) nil)))
   p/IDivide
   (-divide [a b] (if (number? b)
-                   (Vec3. (/ (.-x a) b) (/ (.-y a) b) (/ (.-z a) b))
-                   (Vec3. (/ (.-x a) (.-x b)) (/ (.-y a) (.-y b)) (/ (.-z a) (.-z b)))))
+                   (Vec3. (/ (.-x a) b) (/ (.-y a) b) (/ (.-z a) b) nil)
+                   (Vec3. (/ (.-x a) (.-x b)) (/ (.-y a) (.-y b)) (/ (.-z a) (.-z b)) nil)))
   ISeqable
   (-seq [_] (list x y z)))
 
-(deftype Vec4 [w x y z]
+(deftype Vec4 [w x y z ^:mutable ta]
   Object
   (toString [_] (str "(" w ", " x ", " y ", " z ")"))
   p/ITypedArray
-  (-typed-array [_] (js/Float32Array. (array w x y z)))
+  (-typed-array [_] (if ta
+                      ta
+                      (do
+                        (set! ta (js/Float32Array. (array w x y z)))
+                        ta)))
   p/IAdd
-  (-add [a b] (Vec4. (+ (.-w a) (.-w b)) (+ (.-x a) (.-x b)) (+ (.-y a) (.-y b)) (+ (.-z a) (.-z b))))
+  (-add [a b] (Vec4. (+ (.-w a) (.-w b)) (+ (.-x a) (.-x b)) (+ (.-y a) (.-y b)) (+ (.-z a) (.-z b)) nil))
   p/ISubtract
-  (-subtract [a b] (Vec4. (- (.-w a) (.-w b)) (- (.-x a) (.-x b)) (- (.-y a) (.-y b)) (- (.-z a) (.-z b))))
+  (-subtract [a b] (Vec4. (- (.-w a) (.-w b)) (- (.-x a) (.-x b)) (- (.-y a) (.-y b)) (- (.-z a) (.-z b)) nil))
   p/IMultiply
   (-multiply [a b] (if (number? b)
-                     (Vec4. (* (.-w a) b) (* (.-x a) b) (* (.-y a) b) (* (.-z a) b))
-                     (Vec4. (* (.-w a) (.-w b)) (* (.-x a) (.-x b)) (* (.-y a) (.-y b)) (* (.-z a) (.-z b)))))
+                     (Vec4. (* (.-w a) b) (* (.-x a) b) (* (.-y a) b) (* (.-z a) b) nil)
+                     (Vec4. (* (.-w a) (.-w b)) (* (.-x a) (.-x b)) (* (.-y a) (.-y b)) (* (.-z a) (.-z b)) nil)))
   p/IDivide
   (-divide [a b] (if (number? b)
-                   (Vec4. (/ (.-w a) b) (/ (.-x a) b) (/ (.-y a) b) (/ (.-z a) b))
-                   (Vec4. (/ (.-w a) (.-w b)) (/ (.-x a) (.-x b)) (/ (.-y a) (.-y b)) (/ (.-z a) (.-z b)))))
+                   (Vec4. (/ (.-w a) b) (/ (.-x a) b) (/ (.-y a) b) (/ (.-z a) b) nil)
+                   (Vec4. (/ (.-w a) (.-w b)) (/ (.-x a) (.-x b)) (/ (.-y a) (.-y b)) (/ (.-z a) (.-z b)) nil)))
   ISeqable
   (-seq [_] (list w x y z)))
 
@@ -192,12 +211,12 @@
   "Creates a new matrix. elements should be a nested collection that contains
   matrix elements in column major order."
   [elements]
-  (Matrix. (mapv vec elements) (count elements) (count (first elements))))
+  (Matrix. (mapv vec elements) (count elements) (count (first elements)) nil))
 
 (defn m-identity
   "Creates an identity matrix."
   ([n]
-   (Matrix. (partition n (take (* n n) (cycle (cons 1 (repeat n 0))))) 4 4))
+   (m (partition n (take (* n n) (cycle (cons 1 (repeat n 0)))))))
   ([]
    (m-identity 4)))
 
@@ -219,7 +238,7 @@
 (defn m-transpose
   "Returns the transpose matrix."
   [matrix]
-  (Matrix. (apply mapv vector (.-elements matrix)) (.-cols matrix) (.-rows matrix)))
+  (Matrix. (apply mapv vector (.-elements matrix)) (.-cols matrix) (.-rows matrix) nil))
 
 ;;;; GL UTIL MATRIX FUNCTIONS ;;;;;
 
@@ -237,7 +256,8 @@
       [0 0 (/ z-far (- z-far z-near)) 1]
       [0 0 (/ (* z-far z-near -1) (- z-far z-near)) 0]]
      4
-     4)))
+     4
+     nil)))
 
 (defn m-ortho
   "Constructs an orthographic projection matrix."
@@ -260,7 +280,8 @@
      (/ (+ z2 z1) (- z2 z1) -1)
      1]]
    4
-   4))
+   4
+   nil))
 
 (defn m-quaternion
   "Constructs a rotation matrix from a quaternion."
@@ -279,7 +300,7 @@
      (Matrix. [[(- 1 (* 2 (+ yy zz)))   (* 2 (- xy zw))         (* 2 (+ xz yw))         0]
                [(* 2 (+ xy zw))         (- 1 (* 2 (+ xx zz)))   (* 2 (- yz xw))         0]
                [(* 2 (- xz yw))         (* 2 (+ yz xw))         (- 1 (* 2 (+ xx yy)))   0]
-               [0                       0                       0                       1]] 4 4)))
+               [0                       0                       0                       1]] 4 4 nil)))
   ([v4]
    (m-quaternion (.-w v4) (.-x v4) (.-y v4) (.-z v4))))
 
@@ -293,7 +314,7 @@
     (Matrix. [[1  0  0  0]
               [0  c  s 0]
               [0  -s c  0]
-              [0  0  0  1]] 4 4)))
+              [0  0  0  1]] 4 4 nil)))
 
 (defn m-rotate-y
   "Constructs a rotation matrix that represents a y axis rotation."
@@ -305,7 +326,7 @@
     (Matrix. [[c  0  -s 0]
               [0  1  0  0]
               [s  0  c  0]
-              [0  0  0  1]] 4 4)))
+              [0  0  0  1]] 4 4 nil)))
 
 (defn m-rotate-z
   "Constructs a rotation matrix that represents a z axis rotation."
@@ -317,7 +338,7 @@
     (Matrix. [[c  s  0  0]
               [-s c  0  0]
               [0  0  1  0]
-              [0  0  0  1]] 4 4)))
+              [0  0  0  1]] 4 4 nil)))
 
 (defn m-translate
   "Constructs a translation matrix."
@@ -325,7 +346,7 @@
    (Matrix. [[1 0 0 0]
              [0 1 0 0]
              [0 0 1 0]
-             [x y z 1]] 4 4))
+             [x y z 1]] 4 4 nil))
   ([v3]
    (m-translate (.-x v3) (.-y v3) (.-z v3))))
 
@@ -335,7 +356,7 @@
    (Matrix. [[x 0 0 0]
              [0 y 0 0]
              [0 0 z 0]
-             [0 0 0 1]] 4 4))
+             [0 0 0 1]] 4 4 nil))
   ([v3]
    (m-scale (.-x v3) (.-y v3) (.-z v3))))
 
@@ -348,8 +369,8 @@
   (if (= (type v) Vec2)
     v
     (if (= (type v) Vec3)
-      (Vec2. (.-x v) (.-y v))
-      (Vec2. (.-w v) (.-x v)))))
+      (Vec2. (.-x v) (.-y v) nil)
+      (Vec2. (.-w v) (.-x v) nil))))
 
 (defn v3
   "Creates a 3d vector from another vector. If the
@@ -359,8 +380,8 @@
   (if (= (type v) Vec3)
     v
     (if (= (type v) Vec2)
-      (Vec3. (.-x v) (.-y v) 0)
-      (Vec3. (.-w v) (.-x v) (.-y v)))))
+      (Vec3. (.-x v) (.-y v) 0 nil)
+      (Vec3. (.-w v) (.-x v) (.-y v) nil))))
 
 (defn v4
   "Creates a 4d vector from another vector. If the
@@ -370,17 +391,17 @@
   (if (= (type v) Vec4)
     v
     (if (= (type v) Vec3)
-      (Vec4. (.-x v) (.-y v) (.-z v) 0)
-      (Vec4. (.-x v) (.-y v) 0 0))))
+      (Vec4. (.-x v) (.-y v) (.-z v) 0 nil)
+      (Vec4. (.-x v) (.-y v) 0 0 nil))))
 
 (defn v
   "Creates a 2, 3, or 4 dimensional vector."
   ([x y]
-   (Vec2. x y))
+   (Vec2. x y nil))
   ([x y z]
-   (Vec3. x y z))
+   (Vec3. x y z nil))
   ([w x y z]
-   (Vec4. w x y z)))
+   (Vec4. w x y z nil)))
 
 (defn v-dot
   "Returns the vector dot product of two vectors."
@@ -401,7 +422,8 @@
     (Vec3.
      (- (* ay bz) (* by az))
      (- (* bx az) (* ax bz))
-     (- (* ax by) (* ay bx)))))
+     (- (* ax by) (* ay bx))
+     nil)))
 
 ;;;;; MAKE MATH SIMPLE ;;;;;
 

@@ -58,7 +58,7 @@
                    (swap! (:args-id asset-group) assoc-in [atype akey] id)
                    (swap! (:id-args asset-group) assoc id bkey)
                    (swap! (:id-asset asset-group) assoc id [game (isdn game h)])
-                   (util/log "Loaded " atype " with id " id " from " akey ".")
+                   (util/log "Loaded " (name atype) " with id \"" id "\" from " akey ".")
                    (swap! done-handles inc)
                    (reset! progress (/ @done-handles num-handles)))
                  (reset! handles (apply dissoc @handles (keys finished-handles)))
