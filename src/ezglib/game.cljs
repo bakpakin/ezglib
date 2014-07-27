@@ -71,49 +71,6 @@
 
 ;;;;; GAME FUNCTIONS ;;;;;
 
-(declare main-loop!)
-
-(defn create
-  "Makes an ezglib game. element-id is the DOM
-  element in which the game is injected. game-id is
-  the id of the game element."
-  [& {:keys [width height element element-id game-id modes mode canvas
-             assets on-load load-update start-on-load? preload] :as args}]
-  (let [e (if-let [tmp (.getElementById js/document element-id)] tmp (.-body js/document))
-        c (.createElement js/document "canvas")
-        g {:modes (atom (or modes {:default (mode)}))
-           :mode (atom (or mode :default))
-           :element (or element e)
-           :loop (atom true)
-           :canvas (or canvas c)
-           :event-queue (atom cljs.core.PersistentQueue.EMPTY)
-           :gl (gl/create-context c)
-           :audio-context (sound/create-context)
-           :dt (atom 0)
-           :now (atom (.getTime (js/Date.)))}]
-    (.appendChild e c)
-    (when game-id
-      (set! (.-id c) game-id))
-    (set! (.-width c) width)
-    (set! (.-height c) height)
-    (gl/reset-viewport! (:gl g))
-    (input/init! g)
-    (gl/clear! (:gl g))
-    (when preload (preload g))
-    (when assets
-      (asset/load!
-        :game g
-        :assets assets
-        :update load-update
-        :on-load (if start-on-load?
-                   (if on-load
-                     (fn []
-                       (on-load)
-                       (main-loop! g))
-                     #(main-loop! g))
-                   on-load)))
-    g))
-
 (defn canvas
   "Gets the game canvas used for rendering."
   [game]

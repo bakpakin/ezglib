@@ -483,10 +483,3 @@
      (- (* bx az) (* ax bz))
      (- (* ax by) (* ay bx))
      nil)))
-
-;;;;; MAKE MATH SIMPLE ;;;;;
-
-(def + add)
-(def - sub)
-(def * mult)
-(def / div)
