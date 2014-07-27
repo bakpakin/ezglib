@@ -337,7 +337,7 @@
     (do
       (.viewport gl 0 0 (.-drawingBufferWidth gl) (.-drawingBufferHeight gl))
       (.enable gl depth-test)
-      (.clearColor gl 0.4 0.4 0.4 1.0)
+      (.clearColor gl 0.0 0.0 0.0 1.0)
       (.enable gl depth-test)
       (.enable gl blend)
       (.depthFunc gl lequal)
