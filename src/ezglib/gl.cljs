@@ -345,7 +345,7 @@
       (set! (.-currentShader gl) nil)
       gl)
     (do
-      (throw (js/Error. "Unable to load webgl context. Your browser may not support it."))
+      (util/log "Unable to load webgl context. Your browser may not support it.")
       nil)))
 
 (defn context-width
@@ -572,7 +572,7 @@
     (.compileShader gl shader)
     (if (not (.getShaderParameter gl shader compile-status))
       (do
-        (throw (js/Error. (str "An error occured while compiling the shader: " (.getShaderInfoLog gl shader))))
+        (util/log "An error occured while compiling the shader: " (.getShaderInfoLog gl shader))
         nil)
       shader)))
 
@@ -586,7 +586,7 @@
     (.linkProgram gl prgrm)
     (if (not (.getProgramParameter gl prgrm link-status))
       (do
-        (throw (js/Error. "An error occured while linking the shader."))
+        (util/log "An error occured while linking the shader.")
         nil)
       prgrm)))
 
@@ -681,7 +681,7 @@
         35678    (.uniform1iv gl loc v) ;sampler-2d
         35680    (.uniform1iv gl loc v) ;sampler-cube
 
-        (throw (js/Error. (str "Couldn't set uniform \"" (name location) "\" on shader with value: " value)))))
+        (util/log "Couldn't set uniform \"" (name location) "\" on shader with value: " value)))
     gl))
 
 (defn- vertex-type

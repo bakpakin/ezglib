@@ -41,7 +41,7 @@
                     :dt (atom 0)
                     :now (atom (.getTime (js/Date.)))})
          (.appendChild e# ~'canvas)
-         (when ~game-id (set! (.-id ~'canvas) ~game-id))
+         (set! (.-id ~'canvas) ~game-id)
          (set! (.-width ~'canvas) ~width)
          (set! (.-height ~'canvas) ~height)
          (ezglib.gl/reset-viewport! ~'gl)
