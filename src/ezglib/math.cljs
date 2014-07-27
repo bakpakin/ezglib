@@ -115,9 +115,7 @@
                   (= (-seq this) (-seq o))))
   IIndexed
   (-nth [_ n] (case n 0 x 1 y nil))
-  (-nth [_ n not-found] (case n 0 x 1 y not-found))
-  p/IInverse
-  (-inverse [_] (Vec2. (/ x) (/ y) nil)))
+  (-nth [_ n not-found] (case n 0 x 1 y not-found)))
 
 (deftype Vec3 [x y z ^:mutable ta]
   Object
@@ -148,9 +146,7 @@
                   (= (-seq this) (-seq o))))
   IIndexed
   (-nth [_ n] (case n 0 x 1 y 2 z nil))
-  (-nth [_ n not-found] (case n 0 x 1 y 2 z not-found))
-  p/IInverse
-  (-inverse [_] (Vec3. (/ x) (/ y) (/ z) nil)))
+  (-nth [_ n not-found] (case n 0 x 1 y 2 z not-found)))
 
 (deftype Vec4 [w x y z ^:mutable ta]
   Object
@@ -181,9 +177,7 @@
                   (= (-seq this) (-seq o))))
   IIndexed
   (-nth [_ n] (case n 0 w 1 x 2 y 3 z nil))
-  (-nth [_ n not-found] (case n 0 w 1 x 2 y 3 z not-found))
-  p/IInverse
-  (-inverse [_] (Vec4. (/ w) (/ x) (/ y) (/ z) nil)))
+  (-nth [_ n not-found] (case n 0 w 1 x 2 y 3 z not-found)))
 
 (deftype VecN [es ^:mutable ta]
   Object
@@ -209,9 +203,7 @@
   ISeqable
   (-seq [_] es)
   IEquiv
-  (-equiv [x o] (= (-seq x) (-seq o)))
-  p/IInverse
-  (-inverse [_] (VecN. (mapv / es) nil)))
+  (-equiv [x o] (= (-seq x) (-seq o))))
 
 ;;;;; OPERATIONS ;;;;;
 
