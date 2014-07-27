@@ -1,6 +1,5 @@
 (ns ezglib.math
   (:require [clojure.string :as string]
-            [ezglib.util :as util]
             [ezglib.protocol :as p]))
 
 ;;;;; DEFTYPE ;;;;;
@@ -19,11 +18,13 @@
   (-nth [_ n not-found] (get-in elements [(quot n cols) n] not-found))
   ISeqable
   (-seq [_] (flatten elements))
+  IEquiv
+  (-equiv [x o] (= elements o))
   p/ITypedArray
   (-typed-array [_] (if ta
                       ta
                       (do
-                        (set! ta (util/float32 (flatten elements)))
+                        (set! ta (js/Float32Array. (to-array (flatten elements))))
                         ta)))
   p/IAdd
   (-add
@@ -107,7 +108,16 @@
                    (Vec2. (/ (.-x a) b) (/ (.-y a) b) nil)
                    (Vec2. (/ (.-x a) (.-x b)) (/ (.-y a) (.-y b)) nil)))
   ISeqable
-  (-seq [_] (list x y)))
+  (-seq [_] (list x y))
+  IEquiv
+  (-equiv [this o] (if (= (type o) Vec2)
+                  (and (identical? x (.-x o)) (identical? y (.-y o)))
+                  (= (-seq this) (-seq o))))
+  IIndexed
+  (-nth [_ n] (case n 0 x 1 y nil))
+  (-nth [_ n not-found] (case n 0 x 1 y not-found))
+  p/IInverse
+  (-inverse [_] (Vec2. (/ x) (/ y) nil)))
 
 (deftype Vec3 [x y z ^:mutable ta]
   Object
@@ -131,7 +141,16 @@
                    (Vec3. (/ (.-x a) b) (/ (.-y a) b) (/ (.-z a) b) nil)
                    (Vec3. (/ (.-x a) (.-x b)) (/ (.-y a) (.-y b)) (/ (.-z a) (.-z b)) nil)))
   ISeqable
-  (-seq [_] (list x y z)))
+  (-seq [_] (list x y z))
+  IEquiv
+  (-equiv [this o] (if (= (type o) Vec3)
+                  (and (identical? x (.-x o)) (identical? y (.-y o)) (identical? z (.-z o)))
+                  (= (-seq this) (-seq o))))
+  IIndexed
+  (-nth [_ n] (case n 0 x 1 y 2 z nil))
+  (-nth [_ n not-found] (case n 0 x 1 y 2 z not-found))
+  p/IInverse
+  (-inverse [_] (Vec3. (/ x) (/ y) (/ z) nil)))
 
 (deftype Vec4 [w x y z ^:mutable ta]
   Object
@@ -155,7 +174,44 @@
                    (Vec4. (/ (.-w a) b) (/ (.-x a) b) (/ (.-y a) b) (/ (.-z a) b) nil)
                    (Vec4. (/ (.-w a) (.-w b)) (/ (.-x a) (.-x b)) (/ (.-y a) (.-y b)) (/ (.-z a) (.-z b)) nil)))
   ISeqable
-  (-seq [_] (list w x y z)))
+  (-seq [_] (list w x y z))
+  IEquiv
+  (-equiv [this o] (if (= (type o) Vec4)
+                  (and (identical? w (.-w o)) (identical? x (.-x o)) (identical? y (.-y o)) (identical? z (.-z o)))
+                  (= (-seq this) (-seq o))))
+  IIndexed
+  (-nth [_ n] (case n 0 w 1 x 2 y 3 z nil))
+  (-nth [_ n not-found] (case n 0 w 1 x 2 y 3 z not-found))
+  p/IInverse
+  (-inverse [_] (Vec4. (/ w) (/ x) (/ y) (/ z) nil)))
+
+(deftype VecN [es ^:mutable ta]
+  Object
+  (toString [_] (str "(" (string/join ", " es) ")"))
+  p/ITypedArray
+  (-typed-array [_] (if ta
+                      ta
+                      (do
+                        (set! ta (js/Float32Array. (to-array es)))
+                        ta)))
+  p/IAdd
+  (-add [_ b] (if (= (count es) (count (.-es b))) (VecN. (mapv + es (.-es b)) nil)))
+  p/ISubtract
+  (-subtract [_ b] (if (= (count es) (count (.-es b))) (VecN. (mapv - es (.-es b)) nil)))
+  p/IMultiply
+  (-multiply [_ b] (if (number? b)
+                     (VecN. (mapv #(* b %) es) nil)
+                     (if (= (count es) (count (.-es b))) (VecN. (mapv * es (.-es b)) nil))))
+  p/IDivide
+  (-divide [_ b] (if (number? b)
+                     (VecN. (mapv #(/ b %) es) nil)
+                     (if (= (count es) (count (.-es b))) (VecN. (mapv / es (.-es b)) nil))))
+  ISeqable
+  (-seq [_] es)
+  IEquiv
+  (-equiv [x o] (= (-seq x) (-seq o)))
+  p/IInverse
+  (-inverse [_] (VecN. (mapv / es) nil)))
 
 ;;;;; OPERATIONS ;;;;;
 
@@ -197,7 +253,8 @@
   "Like /, but works with vectors, etc."
   ([a]
    (if (number? a)
-     (/ a)))
+     (/ a)
+     (p/-inverse a)))
   ([a b]
    (if (number? a)
      (/ a b)
@@ -370,7 +427,9 @@
     v
     (if (= (type v) Vec3)
       (Vec2. (.-x v) (.-y v) nil)
-      (Vec2. (.-w v) (.-x v) nil))))
+      (if (= (type v) VecN)
+        (Vec2. (nth (.-es v) 0) (nth (.-es v) 1) nil)
+        (Vec2. (.-w v) (.-x v) nil)))))
 
 (defn v3
   "Creates a 3d vector from another vector. If the
@@ -381,7 +440,9 @@
     v
     (if (= (type v) Vec2)
       (Vec3. (.-x v) (.-y v) 0 nil)
-      (Vec3. (.-w v) (.-x v) (.-y v) nil))))
+      (if (= (type v) VecN)
+        (Vec3. (nth (.-es v) 0) (nth (.-es v) 1) (nth (.-es v) 2) nil)
+        (Vec3. (.-w v) (.-x v) (.-y v) nil)))))
 
 (defn v4
   "Creates a 4d vector from another vector. If the
@@ -392,16 +453,22 @@
     v
     (if (= (type v) Vec3)
       (Vec4. (.-x v) (.-y v) (.-z v) 0 nil)
-      (Vec4. (.-x v) (.-y v) 0 0 nil))))
+      (if (= (type v) VecN)
+        (Vec4. (nth (.-es v) 0) (nth (.-es v) 1) (nth (.-es v) 2) (nth (.-es v) 2) nil)
+        (Vec4. (.-x v) (.-y v) 0 0 nil)))))
 
 (defn v
-  "Creates a 2, 3, or 4 dimensional vector."
+  "Creates a 2, 3, 4, or n dimensional vector."
+  ([elements]
+   (VecN. elements nil))
   ([x y]
    (Vec2. x y nil))
   ([x y z]
    (Vec3. x y z nil))
   ([w x y z]
-   (Vec4. w x y z nil)))
+   (Vec4. w x y z nil))
+  ([w x y z & more]
+   (VecN. (apply vector w x y z more) nil)))
 
 (defn v-dot
   "Returns the vector dot product of two vectors."

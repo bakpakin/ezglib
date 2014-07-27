@@ -14,6 +14,9 @@
 (defprotocol IDivide
   (-divide [this other]))
 
+(defprotocol IInverse
+  (-inverse [this]))
+
 ;;;;; GL ;;;;;
 
 (defprotocol ITypedArray
