@@ -23,3 +23,7 @@ For the latest snapshot:
 
 * [All Versions](https://clojars.org/ezglib)
 
+## Documentation ##
+
+[Codox Generated Docs](http://bakpakin.github.io/ezglib/doc/)
+
