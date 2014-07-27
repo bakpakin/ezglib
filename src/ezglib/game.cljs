@@ -101,7 +101,7 @@
   [game]
   (:audio-context game))
 
-(defn- update-time
+(defn- ^:no-doc update-time
   "Updates the time in the game."
   [game]
   (let [new-now (.getTime (js/Date.))
@@ -109,7 +109,7 @@
     (reset! (:now game) new-now)
     (reset! (:dt game) dt)))
 
-(defn- game-loop!
+(defn- ^:no-doc game-loop!
   [game mode-id callback-caller]
   (reset! (:mode game) mode-id)
   (reset! (:loop game) true)

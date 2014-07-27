@@ -3,11 +3,11 @@
 
 ;;;;; KEYBOARD ;;;;;
 
-(def downkeys (atom {}))
+(def ^:private ^:no-doc downkeys (atom {}))
 
-(def pressedkeys (atom {}))
+(def ^:private ^:no-doc pressedkeys (atom {}))
 
-(def releasedkeys (atom {}))
+(def ^:private ^:no-doc releasedkeys (atom {}))
 
 (defn key-down?
   "Checks if the given key is down. k should be
@@ -21,7 +21,7 @@
   [k]
   (contains? @pressedkeys k))
 
-(def code-to-keys
+(def ^:private ^:no-doc code-to-keys
   {8 :backspace
    9 :tab
    13 :return
@@ -143,7 +143,7 @@
   [mode k fn1]
   (event/add-handler! mode [:keyrelease k] fn1))
 
-(defn enqueue-keys!
+(defn ^:no-doc enqueue-keys!
   "Enqueues keyboard events. This should be called once a frame."
   [game]
   (doseq [[k ev] @pressedkeys]
@@ -177,7 +177,7 @@
 
 ;;;;; MOUSE ;;;;;
 
-(def ^:private mouse-position (atom [0 0]))
+(def ^:private ^:no-doc mouse-position (atom [0 0]))
 
 (defn mouse-global-pos
   "Gets the global mouse position in the browser. Not recommended for most use."
@@ -211,7 +211,7 @@
 
 ;;;;; INIT ;;;;;
 
-(defn init!
+(defn ^:no-doc init!
   "Initializes the input."
   [game]
   (aset (:canvas game) "onclick" (fn [ev] (event/enqueue-event! game :click ev))))

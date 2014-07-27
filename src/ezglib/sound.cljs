@@ -23,7 +23,7 @@
   (let [c (or (aget js/window "AudioContext") (aget js/window "webkitAudioContext"))]
     (c.)))
 
-(defn- load-sound
+(defn- ^:no-doc load-sound
   "Loads a sound given a url."
   [game url]
   (let [context (:audio-context game)
@@ -43,7 +43,7 @@
     (.send request)
     out))
 
-(defn- sound-loaded?
+(defn- ^:no-doc sound-loaded?
   [game sound]
   (when @sound
     (let [context (:audio-context game)

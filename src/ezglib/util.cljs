@@ -80,7 +80,7 @@
 
 ;;;;; PATH ;;;;;
 
-(def ^:private extension-matcher #"(\w+)$")
+(def ^:private ^:no-doc extension-matcher #"(\w+)$")
 
 (defn file-extension
   "Gets the file extension of the path not including the period."

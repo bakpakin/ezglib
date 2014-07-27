@@ -7,7 +7,7 @@
 
 ;;;;; SHADER ;;;;;
 
-(def frag-header
+(def ^:private ^:no-doc frag-header
   "
   precision mediump float;\n
   varying vec2 vUv;\n
@@ -17,17 +17,17 @@
   uniform float time;\n
   ")
 
-(def color-frag-src
+(def ^:private ^:no-doc color-frag-src
   "void main(void) {\n
     gl_FragColor = color;\n
   }")
 
-(def texture-frag-src
+(def ^:private ^:no-doc texture-frag-src
   "void main(void) {\n
     gl_FragColor = color * texture2D(tDiffuse, vUv);\n
   }")
 
-(def vert-header
+(def ^:private ^:no-doc vert-header
   "
   precision mediump float;\n
   attribute vec3 position;\n
@@ -38,17 +38,17 @@
   uniform float time;\n
   ")
 
-(def default-vert-src
+(def ^:private ^:no-doc default-vert-src
   "void main(void) {\n
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n
     vUv = aUv;\n
   }")
 
-(defn- load-shader-string
+(defn ^:private ^:no-doc load-shader-string
   [game frag vert]
   [(atom nil) (atom frag) (atom vert)])
 
-(defn- load-shader-file
+(defn ^:private ^:no-doc load-shader-file
   [game frag vert]
   (let [gl (:gl game)
         rf (js/XMLHttpRequest.)
@@ -63,7 +63,7 @@
     (.send rv)
     [(atom nil) atm-f atm-v]))
 
-(defn- load-shader
+(defn ^:private ^:no-doc load-shader
   ([game load-type frag vert]
    (case load-type
      :string (load-shader-string game frag vert)
@@ -71,14 +71,14 @@
   ([game frag vert]
    (load-shader-string game frag vert)))
 
-(defn- shader-loaded?
+(defn ^:private ^:no-doc shader-loaded?
   [game [shader-atm frag-atm vert-atm]]
   (if-let [shader @shader-atm]
     shader
     (if (and @frag-atm @vert-atm)
       (reset! shader-atm (gl/load-shader (:gl game) (str frag-header "\n" @frag-atm) (str vert-header "\n" @vert-atm))))))
 
-(defn- free-shader
+(defn ^:no-doc free-shader
   [game shader]
   (gl/free-shader (:gl game) shader))
 
@@ -95,7 +95,7 @@
 
 ;;;;; TEXTURE ;;;;;
 
-(defn- load-texture
+(defn ^:private ^:no-doc load-texture
   ([game url min-filter mag-filter mipmap?]
    (let [atm (atom nil)
          image (js/Image.)]
@@ -109,11 +109,11 @@
   ([game url]
    (load-texture game url gl/linear gl/linear false)))
 
-(defn- free-texture
+(defn ^:private ^:no-doc free-texture
   [game texture]
   (gl/free-texture (:gl game) texture))
 
-(defn- texture-loaded?
+(defn ^:private ^:no-doc texture-loaded?
   [game tex-atm]
   (if-let [tex @tex-atm] tex))
 
@@ -125,7 +125,7 @@
 
 ;;;;; CAMERAS ;;;;;
 
-(deftype Camera2D [x y hw hh angle pos matrix]
+(deftype ^:no-doc Camera2D [x y hw hh angle pos matrix]
   p/I3D
   (-matrix [_] matrix)
   p/IPosition
@@ -149,7 +149,7 @@
 
 ;;;;; SPRITE ;;;;;
 
-(deftype Sprite [gl tex verts uv]
+(deftype ^:no-doc Sprite [gl tex verts uv]
   p/IDrawable
   (-draw [_]
          (gl/bind-texture! gl tex)
@@ -174,17 +174,17 @@
 
 ;;;;; TEXT ;;;;;
 
-(def ^:private font-canvas (.createElement js/document "canvas"))
-(def ^:private font-ctx (.getContext font-canvas "2d"))
+(def ^:private ^:no-doc font-canvas (.createElement js/document "canvas"))
+(def ^:private ^:no-doc font-ctx (.getContext font-canvas "2d"))
 
-(def ^:private text-div (.createElement js/document "div"))
-(def ^:private div-style (.-style text-div))
+(def ^:private ^:no-doc text-div (.createElement js/document "div"))
+(def ^:private ^:no-doc div-style (.-style text-div))
 (set! (.-position div-style) "absolute")
 (set! (.-visibility div-style) "hidden")
 (set! (.-width div-style) "auto")
 (set! (.-height div-style) "auto")
 
-(defn- string-size
+(defn ^:private ^:no-doc string-size
   "Returns the dimensions of a string as [width height]."
   [font-name font-size string]
   (.appendChild (.-body js/document) text-div)
@@ -194,7 +194,7 @@
       (.removeChild (.-body js/document) text-div)
       ret))
 
-(defn- load-text
+(defn ^:private ^:no-doc load-text
   "Loads text for web gl rendering."
   [game font-name font-size text]
   (let [gl (:gl game)
@@ -208,7 +208,7 @@
     (.fillText font-ctx text 0 0)
     (sprite (gl/load-texture gl font-canvas gl/linear gl/linear false))))
 
-(defn- free-text
+(defn ^:private ^:no-doc free-text
   [game text]
   (gl/free-texture (:gl game) text))
 
@@ -219,7 +219,7 @@
 
 ;;;;; GRAPH ;;;;;
 
-(deftype GraphNode [^:mutable children ^:mutable transform ^:mutable local-transform])
+(deftype ^:no-doc GraphNode [^:mutable children ^:mutable transform ^:mutable local-transform])
 
 (defn node
   "Creates a scene graph node."

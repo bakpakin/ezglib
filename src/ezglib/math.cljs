@@ -4,7 +4,7 @@
 
 ;;;;; DEFTYPE ;;;;;
 
-(deftype Matrix [elements rows cols ^:mutable ta]
+(deftype Matrix ^:no-doc [elements rows cols ^:mutable ta]
   Object
   (toString [_]
             (string/join
@@ -86,7 +86,7 @@
       (.-cols b)
       nil))))
 
-(deftype Vec2 [x y ^:mutable ta]
+(deftype Vec2 ^:no-doc [x y ^:mutable ta]
   Object
   (toString [_] (str "(" x ", " y ")"))
   p/ITypedArray
@@ -117,7 +117,7 @@
   (-nth [_ n] (case n 0 x 1 y nil))
   (-nth [_ n not-found] (case n 0 x 1 y not-found)))
 
-(deftype Vec3 [x y z ^:mutable ta]
+(deftype Vec3 ^:no-doc [x y z ^:mutable ta]
   Object
   (toString [_] (str "(" x ", " y ", " z ")"))
   p/ITypedArray
@@ -148,7 +148,7 @@
   (-nth [_ n] (case n 0 x 1 y 2 z nil))
   (-nth [_ n not-found] (case n 0 x 1 y 2 z not-found)))
 
-(deftype Vec4 [w x y z ^:mutable ta]
+(deftype Vec4 ^:no-doc [w x y z ^:mutable ta]
   Object
   (toString [_] (str "(" w ", " x ", " y ", " z ")"))
   p/ITypedArray
@@ -179,7 +179,7 @@
   (-nth [_ n] (case n 0 w 1 x 2 y 3 z nil))
   (-nth [_ n not-found] (case n 0 w 1 x 2 y 3 z not-found)))
 
-(deftype VecN [es ^:mutable ta]
+(deftype VecN ^:no-doc [es ^:mutable ta]
   Object
   (toString [_] (str "(" (string/join ", " es) ")"))
   p/ITypedArray
@@ -291,7 +291,7 @@
 
 ;;;; GL UTIL MATRIX FUNCTIONS ;;;;;
 
-(def ^:private deg-to-rad (/ (.-PI js/Math) 180))
+(def ^:private ^:no-doc deg-to-rad (/ (.-PI js/Math) 180))
 
 ;Shamelessly stolen from gluPerspective. See http://www.opengl.org/wiki/GluPerspective_code
 (defn m-perspective

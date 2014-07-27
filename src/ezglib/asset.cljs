@@ -1,11 +1,11 @@
 (ns ezglib.asset
   (:require [ezglib.util :as util]))
 
-(def ^:private loaders (atom {}))
+(def ^:private ^:no-doc loaders (atom {}))
 
-(def ^:private is-dones (atom {}))
+(def ^:private ^:no-doc is-dones (atom {}))
 
-(def ^:private releasers (atom {}))
+(def ^:private ^:no-doc releasers (atom {}))
 
 (defn asset-group
   "Creates a new asset group."
@@ -15,7 +15,7 @@
    ;args-id is a nested map
    :args-id (atom {})})
 
-(def default-group (asset-group))
+(def ^:private ^:no-doc default-group (asset-group))
 
 (defn asset
   "Checks if the given asset has been loaded. If so, returns it - else
@@ -25,7 +25,7 @@
   ([asset-group id]
     (get (get @(:id-asset asset-group) id) 1)))
 
-(defn- make-handles
+(defn- ^:no-doc make-handles
   [game args]
   (let [f (fn [[atype id & args]]
                (let [h (apply (@loaders atype) game args)
