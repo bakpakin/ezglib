@@ -3,16 +3,22 @@
 (defmacro defgame
   "Defs an ezglib game."
   [name & {:keys [width height element element-id game-id modes mode canvas
-                 assets on-load load-update start-on-load? preload]}]
+                 assets on-load load-update start-on-load? preload fps]}]
   (let [pre (if preload `(~preload) `(fn [] nil))
         onld (if on-load
                (if start-on-load?
-                 '(fn []
-                    (~on-load)
-                    (ezglib.game/main-loop! ~name))
+                 (if fps
+                   '(fn []
+                     (~on-load)
+                     (ezglib.game/main-loop! ~name ~fps))
+                   '(fn []
+                     (~on-load)
+                     (ezglib.game/main-loop! ~name)))
                  on-load)
                (if start-on-load?
-                 `(fn [] (ezglib.game/main-loop! ~name))
+                 (if fps
+                   `(fn [] (ezglib.game/main-loop! ~name ~fps))
+                   `(fn [] (ezglib.game/main-loop! ~name)))
                  `(fn [] nil)))
         ast (if assets
               `(ezglib.asset/load!
