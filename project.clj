@@ -1,4 +1,4 @@
-(defproject ezglib "0.1.5"
+(defproject ezglib "0.0.0-SNAPSHOT"
   :description "Make WebGL games in ClojureScript."
   :url "https://github.com/bakpakin/ezglib"
   :license {:name "Eclipse Public License"
