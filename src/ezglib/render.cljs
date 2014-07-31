@@ -3,7 +3,8 @@
             [ezglib.util :as util]
             [ezglib.asset :as asset]
             [ezglib.math :as m]
-            [ezglib.protocol :as p]))
+            [ezglib.protocol :as p]
+            [ezglib.ecs :as ecs]))
 
 ;;;;; SHADER ;;;;;
 
@@ -216,16 +217,3 @@
  :asset :text
  :load-fn load-text
  :free-fn free-text)
-
-;;;;; GRAPH ;;;;;
-
-(deftype ^:no-doc GraphNode [^:mutable children ^:mutable transform ^:mutable local-transform])
-
-(defn node
-  "Creates a scene graph node."
-  ([matrix & children]
-   (GraphNode. children nil matrix))
-  ([matrix]
-   (GraphNode. (list) nil matrix))
-  ([]
-   (GraphNode. (list) nil (m/m-identity 4))))

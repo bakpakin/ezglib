@@ -834,7 +834,7 @@
    depth-test               true
    dither                   true
    polygon-offset-fill      false
-   sample-alpha-to-coverage false
+   sample-alpha-to-coverage true
    sample-coverage          false
    scissor-test             false
    stencil-test             false})

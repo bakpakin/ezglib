@@ -3,7 +3,7 @@
 (defmacro defgame
   "Defs an ezglib game."
   [name & {:keys [width height element element-id game-id modes mode canvas
-                 assets on-load load-update start-on-load? preload]}]
+                 assets on-load load-update start-on-load? preload systems entities]}]
   (let [pre (if preload `(~preload) `(fn [] nil))
         onld (if on-load
                (if start-on-load?
@@ -25,6 +25,7 @@
        (let [~'canvas (or ~canvas (.createElement js/document "canvas"))
              ~'gl (ezglib.gl/create-context ~'canvas)
              ~'audio-context (ezglib.sound/create-context)
+             ~'world (ezglib.ecs/world)
              e# (if ~element-id
                   (.getElementById js/document ~element-id)
                   (if ~element
@@ -36,6 +37,7 @@
                     :loop (atom true)
                     :canvas ~'canvas
                     :event-queue (atom cljs.core.PersistentQueue.EMPTY)
+                    :world ~'world
                     :gl ~'gl
                     :audio-context ~'audio-context
                     :dt (atom 0)
@@ -49,5 +51,7 @@
          (ezglib.gl/clear! ~'gl)
          ~pre
          (reset! (:modes ~name) (or ~modes {:default (ezglib.game/mode)}))
+         (ezglib.ecs/add! ~'world ~@systems)
+         (ezglib.ecs/add! ~'world ~@entities)
          ~ast
          ~name))))

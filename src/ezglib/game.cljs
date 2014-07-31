@@ -4,7 +4,8 @@
             [ezglib.input :as input]
             [ezglib.asset :as asset]
             [ezglib.gl :as gl]
-            [ezglib.render :as render]))
+            [ezglib.render :as render]
+            [ezglib.ecs :as ecs]))
 
 ;;;;; Mode Functions ;;;;;
 
@@ -54,7 +55,7 @@
 
 (defn mode
   "Makes a game mode with specified handlers."
-  [& {:keys [update handlers key-press key-release key-down] :as args}]
+  [& {:keys [update render handlers key-press key-release key-down]}]
   (let [m {:update (or update (fn [] nil))
            :handlers (atom {})
            :handler-types (atom {})
