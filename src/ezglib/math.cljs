@@ -293,6 +293,8 @@
 
 (def ^:private ^:no-doc deg-to-rad (/ (.-PI js/Math) 180))
 
+(def m-identity4 ^{:doc "The 4x4 identity matrix."} (m-identity 4))
+
 ;Shamelessly stolen from gluPerspective. See http://www.opengl.org/wiki/GluPerspective_code
 (defn m-perspective
   "Constructs a perspective projection matrix."

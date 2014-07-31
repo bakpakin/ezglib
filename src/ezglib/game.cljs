@@ -45,6 +45,8 @@
   (if-let [new-mode (@(:modes game) mode-id)]
     (do
       (reset! (:mode game) mode-id)
+      (reset! (:handlers game) @(:handlers new-mode))
+      (reset! (:handler-types game) @(:handler-types new-mode))
       new-mode)
     nil))
 
@@ -120,7 +122,7 @@
           (input/enqueue-keys! game)
           (update-time game)
           ((:update m))
-          (event/handle-events! game m)))))
+          (event/handle-events! game)))))
 
 (defn main-loop!
   "Runs the main loop of a game. If no fps

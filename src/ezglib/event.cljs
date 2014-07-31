@@ -3,17 +3,18 @@
 (defn enqueue-event!
   "Queues an event that happened in the game."
   [game event-type & params]
-  (swap! (:event-queue game) conj [event-type (vec params)]))
+  (if (seq (get @(:handlers game) event-type))
+    (swap! (:event-queue game) conj [event-type (vec params)])))
 
-(defn handle-events!
+(defn ^:no-doc handle-events!
   "Executes all event handlers in the game-mode for the currently queued events.
   Users of this library should not usually have to call this."
-  [game mode]
+  [game]
   (enqueue-event! game ::end-update)
   (let [event-queue (:event-queue game)]
     (while (when-let [n (peek @event-queue)] (not (= ::end-update n)))
       (let [[et params] (peek @event-queue)]
-        (when-let [hs (@(:handlers mode) et)]
+        (when-let [hs (@(:handlers game) et)]
           (doseq [h (vals hs)]
             (apply h params)))
         (swap! event-queue pop)))

@@ -217,3 +217,19 @@
  :asset :text
  :load-fn load-text
  :free-fn free-text)
+
+;;;;; SYSTEMS ;;;;;
+
+(defn ^:no-doc matrix-system
+  []
+  (ecs/system
+   (ecs/matcher [:ezglib.ecs/root])
+   (fn cb
+     ([e]
+      (cb e m/m-identity4)
+      e)
+     ([e xform]
+      (let [local-xform (or (ecs/prop e :local-transform) m/m-identity4)]
+        (ecs/set-prop! e :global-transform (m/mult local-xform xform))
+        (doseq [c (.-children e)]
+          (cb c (ecs/prop e :global-transform))))))))

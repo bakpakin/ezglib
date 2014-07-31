@@ -1,8 +1,9 @@
-(ns ezglib.ecs)
+(ns ezglib.ecs
+  (:require [ezglib.event :as event]))
 
 ;;;;; DEFTYPE ;;;;;
 
-(deftype ^:private ^:no-doc World [root ^:mutable systems ^:mutable entities]
+(deftype ^:private ^:no-doc World [game root ^:mutable systems ^:mutable entities]
   Object
   (toString [_] (str "systems: " systems ", entities: " entities)))
 (deftype ^:private ^:no-doc Entity [id ^:mutable world ^:mutable properties ^:mutable children]
@@ -163,10 +164,10 @@
 
 (defn world
   "Creates a new world."
-  [& items]
+  [game & items]
   (let [r (entity {::root true})
         r-id (.-id r)]
-    (apply add! (World. r #{} #{r-id}) items)))
+    (apply add! (World. game r #{} #{r-id}) items)))
 
 (defn update
   "Updates a world."
@@ -175,4 +176,5 @@
     (let [s (get @systems s-id)]
       (doseq [e-id (.-entities s)]
         (let [e (get @entities e-id)]
-          (swap! entities assoc e-id ((.-func s) e)))))))
+          (swap! entities assoc e-id ((.-func s) e))))
+      (event/handle-events! (.-game world)))))
