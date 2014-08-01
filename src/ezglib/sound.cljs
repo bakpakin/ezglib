@@ -14,47 +14,13 @@
 ;Hopefully, I can somehow get rid of this ugly workaround.
 
 (ns ezglib.sound
-  (:require [ezglib.asset :as asset]
-            [ezglib.util :as util]))
+  (:require [ezglib.util :as util]))
 
 (defn create-context
   "Creates an audio context."
   []
   (let [c (or (aget js/window "AudioContext") (aget js/window "webkitAudioContext"))]
     (c.)))
-
-(defn- ^:no-doc load-sound
-  "Loads a sound given a url."
-  [game url]
-  (let [context (:audio-context game)
-        request (js/XMLHttpRequest.)
-        out (atom nil)]
-    (.open request "GET" url true)
-    (set! (.-responseType request) "arraybuffer")
-    (set!
-     (.-onload request)
-     (fn []
-       ;would rather use .decodeAudioData
-       (.call (aget context "decodeAudioData")
-        context
-        (.-response request)
-        (fn [buffer] (reset! out buffer))
-        (fn [] (reset! out nil)))))
-    (.send request)
-    out))
-
-(defn- ^:no-doc sound-loaded?
-  [game sound]
-  (when @sound
-    (let [context (:audio-context game)
-          s @sound]
-      (set! (.-context s) context)
-      s)))
-
-(asset/add-asset
- :asset :sound
- :load-fn load-sound
- :is-done? sound-loaded?)
 
 (defn play
   "Plays a sound."
