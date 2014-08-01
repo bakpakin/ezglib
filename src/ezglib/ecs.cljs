@@ -59,6 +59,16 @@
     (swap! _entities assoc id e)
     e))
 
+(defn entity-by-id
+  "Gets an entity by it's id."
+  [id]
+  (get @_entities id))
+
+(defn system-by-id
+  "Gets a system by it's id."
+  [id]
+  (get @_systems id))
+
 (defn prop
   "Get a property of an entity."
   [entity property]
@@ -130,13 +140,13 @@
   (doseq [s-id (.-systems world)]
     (try-add! s-id (.-id entity)))
   (doseq [c (.-children entity)]
-    (add-child! world c)))
+    (add-child! world (get @_entities c))))
 
 (defn add-entity!
   "Adds an entity to the world and recursively adds children. Returns the world."
   [world entity]
   (add-child! world entity)
-  (set! (.-children (.-root world)) (conj (.-children (.-root world)) entity))
+  (set! (.-children (.-root world)) (conj (.-children (.-root world)) (.-id entity)))
   world)
 
 (defn add!

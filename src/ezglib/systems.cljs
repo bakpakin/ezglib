@@ -5,7 +5,7 @@
             [ezglib.render :as r]
             [ezglib.util :as util]
             [ezglib.game :as game]
-            [ezglib.ecs :as ecs :refer [system matcher prop set-prop! swap-prop!]]))
+            [ezglib.ecs :as ecs :refer [system matcher prop set-prop! swap-prop! entity-by-id]]))
 
 ;;;;; DEFAULT SYSTEMS ;;;;;
 
@@ -21,7 +21,7 @@
       (let [local-xform (or (prop e :local-transform) m/m-identity4)]
         (set-prop! e :global-transform (m/mult local-xform xform))
         (doseq [c (.-children e)]
-          (cb c (prop e :global-transform))))))))
+          (cb (entity-by-id c) (prop e :global-transform))))))))
 
 (let [origin (m/vec3 0 0 0)
       i2 (m/vec2 1 1)]
@@ -65,4 +65,13 @@
    (fn [e]
      (if (not (prop e :position)) (set-prop! e :position (m/v 0 0 0)))
      (swap-prop! e :position m/add (m/mult (prop e :velocity) (game/delta game)))
+     nil)))
+
+(defn rotate2d-system
+  [game]
+  (system
+   (matcher [:angular-velocity])
+   (fn [e]
+     (if (not (prop e :rotation)) (set-prop! e :rotation 0))
+     (swap-prop! e :rotation + (* (prop e :angular-velocity) (game/delta game)))
      nil)))
