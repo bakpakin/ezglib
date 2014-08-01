@@ -391,6 +391,8 @@
               [0  0  1  0]
               [0  0  0  1]] 4 4 nil)))
 
+(declare v3)
+
 (defn m-translate
   "Constructs a translation matrix."
   ([x y z]
@@ -398,8 +400,8 @@
              [0 1 0 0]
              [0 0 1 0]
              [x y z 1]] 4 4 nil))
-  ([v3]
-   (m-translate (.-x v3) (.-y v3) (.-z v3))))
+  ([v]
+   (let [v3 (v3 v)] (m-translate (.-x v3) (.-y v3) (.-z v3)))))
 
 (defn m-scale
   "Constructs a scaling matrix."
@@ -408,8 +410,8 @@
              [0 y 0 0]
              [0 0 z 0]
              [0 0 0 1]] 4 4 nil))
-  ([v3]
-   (m-scale (.-x v3) (.-y v3) (.-z v3))))
+  ([v]
+   (let [v3 (v3 v)] (m-scale (.-x v3) (.-y v3) (.-z v3)))))
 
 ;;;;; VECTOR ;;;;;
 
@@ -463,6 +465,21 @@
    (Vec4. w x y z nil))
   ([w x y z & more]
    (VecN. (apply vector w x y z more) nil)))
+
+(defn vec2
+  "Creates a 2d vector."
+  [x y]
+  (Vec2. x y nil))
+
+(defn vec3
+  "Creates a 3d vector."
+  [x y z]
+  (Vec3. x y z nil))
+
+(defn vec4
+  "Creates a 4d vector."
+  [w x y z]
+  (Vec4. w x y z nil))
 
 (defn v-dot
   "Returns the vector dot product of two vectors."

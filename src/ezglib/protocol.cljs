@@ -31,7 +31,7 @@
 
 (defprotocol IDrawable
   (-draw! [this] "Types that implement -draw should assume
-          That the shader and projection matrix have
+          that the shader and projection matrix have
           already been applied. Textures, attributes, and other uniforms may be
           applied as needed. Implementations should then use ezglib.gl.draw-arrays! or
           ezglib.gl.draw-elements! to draw to the drawing buffer."))

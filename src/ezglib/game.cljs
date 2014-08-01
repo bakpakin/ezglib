@@ -30,7 +30,7 @@
 (defn current-mode
   "Gets the current mode of the game."
   [game]
-  (@(:modes game) @(:mode game)))
+  (get @(:modes game) @(:mode game)))
 
 (defn get-mode
   "Retrieves a mode by id from the game."
@@ -57,8 +57,9 @@
 
 (defn mode
   "Makes a game mode with specified handlers."
-  [& {:keys [update render handlers key-press key-release key-down]}]
+  [& {:keys [update render handlers key-press key-release key-down world]}]
   (let [m {:update (or update (fn [] nil))
+           :world world
            :handlers (atom {})
            :handler-types (atom {})
            :next-id (atom 0)}]
@@ -107,8 +108,8 @@
 (defn- ^:no-doc update-time
   "Updates the time in the game."
   [game]
-  (let [new-now (.getTime (js/Date.))
-        dt (- new-now (:now game))]
+  (let [new-now (/ (.getTime (js/Date.)) 1000)
+        dt (- new-now @(:now game))]
     (reset! (:now game) new-now)
     (reset! (:dt game) dt)))
 
@@ -122,6 +123,7 @@
           (input/enqueue-keys! game)
           (update-time game)
           ((:update m))
+          (if (:world m) (ecs/update! (:world m)))
           (event/handle-events! game)))))
 
 (defn main-loop!

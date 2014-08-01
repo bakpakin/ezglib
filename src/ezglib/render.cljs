@@ -151,15 +151,17 @@
 ;;;;; SPRITE ;;;;;
 
 (deftype ^:no-doc Sprite [gl tex verts uv]
+  Object
+  (toString [_] (str "Sprite"))
   p/IDrawable
-  (-draw [_]
+  (-draw! [_]
          (gl/bind-texture! gl tex)
          (gl/set-attribute*! gl :position verts)
          (gl/set-attribute*! gl :aUv uv)
-         (gl/draw-arrays gl gl/triangle-strip 4)))
+         (gl/draw-arrays! gl gl/triangle-strip 4)))
 
 (defn sprite
-  "Creates a new sprite."
+  "Creates a new sprite from a texture."
   [tex]
   (let [w (.-imageWidth tex)
         h (.-imageHeight tex)
@@ -169,9 +171,39 @@
      (.-gl tex)
      tex
      (gl/buffer (.-gl tex)
-       :data (js/Float32Array. (array 0 0 0 h w 0 w h)))
+       :data (js/Float32Array. (array 0 0 0 0 h 0 w 0 0 w h 0))
+       :item-size 3)
      (gl/buffer (.-gl tex)
-       :data (js/Float32Array. (array 0 0 0 v u 0 u v))))))
+       :data (js/Float32Array. (array 0 0 0 v u 0 u v))
+       :item-size 2))))
+
+(defn ^:private ^:no-doc load-sprite
+  ([game url min-filter mag-filter mipmap?]
+   (let [atm (atom nil)
+         image (js/Image.)]
+     (set! (.-src image) url)
+     (set! (.-crossOrigin image) "anonymous")
+     (set! (.-onload image) (fn []
+                             (reset! atm (sprite (gl/load-texture (:gl game) image min-filter mag-filter mipmap?)))))
+     atm))
+  ([game url min-filter mag-filter]
+   (load-sprite game url min-filter mag-filter false))
+  ([game url]
+   (load-sprite game url gl/linear gl/linear false)))
+
+(defn ^:private ^:no-doc free-sprite
+  [game sprite]
+  (gl/free-texture (:gl game) (.-tex sprite)))
+
+(defn ^:private ^:no-doc sprite-loaded?
+  [game sprite-atm]
+  (if-let [sprite @sprite-atm] sprite))
+
+(asset/add-asset
+ :asset :sprite
+ :load-fn load-sprite
+ :free-fn free-sprite
+ :is-done? sprite-loaded?)
 
 ;;;;; TEXT ;;;;;
 
@@ -217,19 +249,3 @@
  :asset :text
  :load-fn load-text
  :free-fn free-text)
-
-;;;;; SYSTEMS ;;;;;
-
-(defn ^:no-doc matrix-system
-  []
-  (ecs/system
-   (ecs/matcher [:ezglib.ecs/root])
-   (fn cb
-     ([e]
-      (cb e m/m-identity4)
-      e)
-     ([e xform]
-      (let [local-xform (or (ecs/prop e :local-transform) m/m-identity4)]
-        (ecs/set-prop! e :global-transform (m/mult local-xform xform))
-        (doseq [c (.-children e)]
-          (cb c (ecs/prop e :global-transform))))))))

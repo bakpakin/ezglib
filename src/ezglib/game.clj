@@ -1,5 +1,6 @@
 (ns ezglib.game)
 
+;really need to rewrite. If anybody looks at this, i'm sorry.
 (defmacro defgame
   "Defs an ezglib game."
   [name & {:keys [width height element element-id game-id modes mode canvas
@@ -8,17 +9,27 @@
         onld (if on-load
                (if start-on-load?
                  (if fps
-                   '(fn []
+                   `(fn []
                      (~on-load)
+                     (reset! (:modes ~name) (or ~modes {:default (ezglib.game/mode)}))
+                     (ezglib.game/set-mode! ~name ~mode)
                      (ezglib.game/main-loop! ~name ~fps))
-                   '(fn []
+                   `(fn []
                      (~on-load)
+                     (reset! (:modes ~name) (or ~modes {:default (ezglib.game/mode)}))
+                     (ezglib.game/set-mode! ~name ~mode)
                      (ezglib.game/main-loop! ~name)))
                  on-load)
                (if start-on-load?
                  (if fps
-                   `(fn [] (ezglib.game/main-loop! ~name ~fps))
-                   `(fn [] (ezglib.game/main-loop! ~name)))
+                   `(fn []
+                      (reset! (:modes ~name) (or ~modes {:default (ezglib.game/mode)}))
+                      (ezglib.game/set-mode! ~name ~mode)
+                      (ezglib.game/main-loop! ~name ~fps))
+                   `(fn []
+                      (reset! (:modes ~name) (or ~modes {:default (ezglib.game/mode)}))
+                      (ezglib.game/set-mode! ~name ~mode)
+                      (ezglib.game/main-loop! ~name)))
                  `(fn [] nil)))
         ast (if assets
               `(ezglib.asset/load!
@@ -37,6 +48,8 @@
        (def ~name {:modes (atom nil)
                    :mode (atom nil)
                    :element e#
+                   :width ~width
+                   :height ~height
                    :loop (atom true)
                    :canvas ~'canvas
                    :event-queue (atom cljs.core.PersistentQueue.EMPTY)
@@ -45,7 +58,7 @@
                    :gl ~'gl
                    :audio-context ~'audio-context
                    :dt (atom 0)
-                   :now (atom (.getTime (js/Date.)))})
+                   :now (atom (/ (.getTime (js/Date.)) 1000))})
        (.appendChild e# ~'canvas)
        (set! (.-id ~'canvas) ~game-id)
        (set! (.-width ~'canvas) ~width)
@@ -55,6 +68,4 @@
        (ezglib.gl/clear! ~'gl)
        ~pre
        ~ast
-       (reset! (:modes ~name) (or ~modes {:default (ezglib.game/mode)}))
-       (ezglib.game/set-mode! ~name ~mode)
        ~name)))
