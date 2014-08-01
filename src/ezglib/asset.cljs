@@ -39,13 +39,12 @@
 (defn load!
   "Loads assets async. Returns an atom that encapsulates
   the progress of loading as number between 0 and 1."
-  ([& args]
+  ([game & args]
    (let [mp (apply hash-map args)
          type-id-args (or (mp :assets) [])
          on-load (or (mp :on-load) (fn [] nil))
          asset-group (or (mp :asset-group) default-group)
          update (or (mp :update) (fn [p] nil))
-         game (or (mp :game) nil)
          progress (atom 0)
          done-handles (atom 0)
          handles (atom (make-handles game type-id-args))

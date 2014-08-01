@@ -75,6 +75,34 @@
 
 ;;;;; GAME FUNCTIONS ;;;;;
 
+(defn game
+  "Creates a new game."
+  ([width height canvas]
+   (let [gl (gl/create-context canvas)
+         g {:modes (atom nil)
+            :mode (atom nil)
+            :width width
+            :height height
+            :loop (atom true)
+            :canvas canvas
+            :event-queue (atom cljs.core.PersistentQueue.EMPTY)
+            :handlers (atom nil)
+            :handler-types (atom nil)
+            :gl gl
+            :audio-context (sound/create-context)
+            :dt (atom 0)
+            :now (atom (/ (.getTime (js/Date.)) 1000))}]
+     (set! (.-width canvas) width)
+     (set! (.-height canvas) height)
+     (ezglib.gl/reset-viewport! gl)
+     (ezglib.input/init! g)
+     (ezglib.gl/clear! gl)
+     g))
+  ([width height]
+   (let [c (.createElement js/document "canvas")]
+     (.appendChild (.-body js/document) c)
+     (game width height c))))
+
 (defn canvas
   "Gets the game canvas used for rendering."
   [game]
@@ -118,21 +146,21 @@
   (reset! (:mode game) mode-id)
   (reset! (:loop game) true)
   ((fn cb []
-      (when @(:loop game) (callback-caller cb))
-        (let [m (@(:modes game) @(:mode game))]
-          (input/enqueue-keys! game)
-          (update-time game)
-          ((:update m))
-          (if (:world m) (ecs/update! (:world m)))
-          (event/handle-events! game)))))
+     (when @(:loop game) (callback-caller cb))
+     (let [m (@(:modes game) @(:mode game))]
+       (input/enqueue-keys! game)
+       (update-time game)
+       ((:update m))
+       (if (:world m) (ecs/update! (:world m)))
+       (event/handle-events! game)))))
 
 (defn main-loop!
   "Runs the main loop of a game. If no fps
   is provided, will run at native fps."
   ([game fps]
    (game-loop! game @(:mode game)
-              (fn [cb]
-                (js/setTimeout cb (/ 1000 fps)))))
+               (fn [cb]
+                 (js/setTimeout cb (/ 1000 fps)))))
   ([game]
    (game-loop! game @(:mode game) js/requestAnimationFrame)))
 
