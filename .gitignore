@@ -6,6 +6,7 @@
 target
 pom.xml
 pom.asc.xml
+pom.xml.asc
 .repl
 *.swp
 *.zip
