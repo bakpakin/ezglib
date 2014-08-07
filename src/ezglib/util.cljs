@@ -66,10 +66,13 @@
 
 (def ^:dynamic *log-fn* (fn [& messages] (.log js/console (apply str messages))))
 
+(def ^:dynamic *logging* true)
+
 (defn log
   "Logs messages."
   [& messages]
-  (apply *log-fn* messages))
+  (when *logging*
+    (apply *log-fn* messages)))
 
 ;;;;; TIME
 
