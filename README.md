@@ -12,7 +12,7 @@ Ezglib uses [leiningen](http://leiningen.org/) for dependencies.
 For latest released version:
 
 ```
-[ezglib "0.1.5"]
+[ezglib "0.1.6"]
 ```
 
 For the latest snapshot:
