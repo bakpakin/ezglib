@@ -1,6 +1,6 @@
 (ns ezglib.protocol)
 
-;;;;; MATH ;;;;;
+;;;;; MATH
 
 (defprotocol IAdd
   (-add [this other]))
@@ -17,14 +17,14 @@
 (defprotocol IInverse
   (-inverse [this]))
 
-;;;;; GL ;;;;;
+;;;;; GL
 
 (defprotocol ITypedArray
   "Types that extend the ITypedArray protocol can be converted
   to javascript typed arrays for in use in shader uniforms."
   (-typed-array [this]))
 
-;;;;; 3D ;;;;;
+;;;;; 3D
 
 (defprotocol I3D
   (-matrix [this]))

@@ -3,7 +3,7 @@
   (:require [ezglib.util :as util]
             [ezglib.protocol :as p]))
 
-;;;;; CONSTANTS ;;;;;
+;;;;; CONSTANTS
 
 ; All WebGL constants are the same as the javascript versions
 ; except lowercase and with dashes, clojure style.
@@ -311,7 +311,7 @@
 (def ^:no-doc viewport 2978)
 (def ^:no-doc zero 0)
 
-;;;;; TYPED ARRAYS ;;;;;
+;;;;; TYPED ARRAYS
 
 (defn array-gl-type
   "Returns the equivalent WebGl constant contained in a typed array."
@@ -328,7 +328,7 @@
      (if (= value-type js/Float32Array) float)
      (if (= value-type js/Float64Array) nil))))
 
-;;;;; CONTEXT ;;;;;
+;;;;; CONTEXT
 
 (defn create-context
   "Creates the opengl context."
@@ -430,7 +430,7 @@
       (set-capability! gl capability enabled?)))
   gl)
 
-;;;;; BUFFER ;;;;;
+;;;;; BUFFER
 
 (defn buffer
   "Creates a gl buffer with initialized data.
@@ -458,7 +458,7 @@
     (set! (.-dataType buffer) (array-gl-type data))
     buffer))
 
-;;;;; TEXTURE ;;;;;
+;;;;; TEXTURE
 
 (def ^:no-doc ^:private image-canvas (.createElement js/document "canvas"))
 
@@ -563,7 +563,7 @@
      (.bindTexture gl texture-2d texture)
      gl)))
 
-;;;;; SHADER ;;;;;
+;;;;; SHADER
 
 (defn- ^:no-doc make-shader
   [gl src frag-vert]
@@ -707,8 +707,7 @@
     35675    float ;float-mat3
     35676    float ;float-mat4
 
-    float
-    ))
+    float))
 
 (defn set-attribute!
   "Sets an attribute on the current ezglib shader."
@@ -770,14 +769,14 @@
       (doseq [[loc opts] attributes]
         (set-attribute! gl loc opts)))))
 
-;;;;; BLEND ;;;;;
+;;;;; BLEND
 
 (defn blend-func!
   "Sets the gl context to use the given blend function."
   [gl src dest]
   (.blendFunc gl src dest))
 
-;;;;; DRAW ;;;;;
+;;;;; DRAW
 
 (defn clear!
   "Clears the gl context."
@@ -842,7 +841,7 @@
 (defn draw!
   "Draws to the gl context."
   [gl & {:keys [uniforms attributes textures shader draw-mode first count
-                blending? blend-src blend-dest capabilities element-buffer element-offset] :as opts}]
+                blending? blend-src blend-dest capabilities element-buffer element-offset]}]
 
   (use-shader! gl shader :uniforms uniforms :attributes attributes :textures textures)
 

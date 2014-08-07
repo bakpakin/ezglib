@@ -1,11 +1,11 @@
 (ns ezglib.core
   (:require [ezglib.util :as util]
-            [ezglib.sound :as sound]
             [ezglib.gl :as gl]
             [ezglib.protocol :as p]
-            [ezglib.math :as m]))
+            [ezglib.math :as m]
+            [tailrecursion.priority-map :as pm :refer [priority-map]]))
 
-;;;;; ASSET LOADING ;;;;;
+;;;;; ASSET LOADING
 
 (def ^:private ^:no-doc loaders (atom {}))
 
@@ -126,9 +126,22 @@
   (swap! is-dones assoc asset (or is-done? (fn [game x] x)))
   nil)
 
-;;;;; ADD ASSETS ;;;;;
+;;;;; SOUND
 
-;;;;; SOUND ;;;;;
+(defn create-audio-context
+  "Creates an audio context."
+  []
+  (let [c (or (aget js/window "AudioContext") (aget js/window "webkitAudioContext"))]
+    (c.)))
+
+(defn play
+  "Plays a sound."
+  [sound]
+  (let [context (.-context sound)
+        source (.call (aget context "createBufferSource") context)]
+    (aset source "buffer" sound)
+    (.call (aget source "connect") source (aget context "destination"))
+    (.call (aget source "start") source 0)))
 
 (defn- ^:no-doc load-sound
   "Loads a sound given a url."
@@ -163,7 +176,7 @@
  :load-fn load-sound
  :is-done? sound-loaded?)
 
-;;;;; SHADER ;;;;;
+;;;;; SHADER
 
 (def ^:private ^:no-doc frag-header
   "
@@ -251,7 +264,7 @@
   [gl]
   (gl/load-shader gl (str frag-header texture-frag-src) (str vert-header default-vert-src)))
 
-;;;;; TEXTURE ;;;;;
+;;;;; TEXTURE
 
 (defn ^:private ^:no-doc load-texture
   ([game url min-filter mag-filter mipmap?]
@@ -281,9 +294,9 @@
  :free-fn free-texture
  :is-done? texture-loaded?)
 
-;;;;; CAMERAS ;;;;;
+;;;;; CAMERAS
 
-(deftype ^:no-doc Camera2D [x y hw hh angle pos matrix]
+(deftype ^{:no-doc true} Camera2D [x y hw hh angle pos matrix]
   p/I3D
   (-matrix [_] matrix)
   p/IPosition
@@ -305,7 +318,7 @@
      (m/ortho (- x hw) (+ x hw) (- y hh) (+ y hh) -1000000 1000000)
      (m/rotate-z angle)))))
 
-;;;;; SPRITE ;;;;;
+;;;;; SPRITE
 
 (deftype ^:no-doc Sprite [gl tex verts uv]
   Object
@@ -362,7 +375,7 @@
  :free-fn free-sprite
  :is-done? sprite-loaded?)
 
-;;;;; TEXT ;;;;;
+;;;;; TEXT
 
 (def ^:private ^:no-doc font-canvas (.createElement js/document "canvas"))
 (def ^:private ^:no-doc font-ctx (.getContext font-canvas "2d"))
@@ -407,7 +420,7 @@
  :load-fn load-text
  :free-fn free-text)
 
-;;;;; EVENT ;;;;;
+;;;;; EVENT
 
 (defn enqueue-event!
   "Queues an event that happened in the game."
@@ -416,7 +429,7 @@
     (swap! (:event-queue game) conj [event-type (vec params)])))
 
 (defn ^:no-doc handle-events!
-  "Executes all event handlers in the game-mode for the currently queued events.
+  "Executes all event handlers in the game-state for the currently queued events.
   Users of this library should not usually have to call this."
   [game]
   (enqueue-event! game ::end-update)
@@ -435,92 +448,94 @@
   [game]
   (reset! (:event-queue game) cljs.core.PersistentQueue.EMPTY))
 
-;;;;; MODE FUNCTIONS ;;;;;
+;;;;; STATE FUNCTIONS ;;;;;
 
 (defn add-handler!
-  "Adds a handler to the mode for a certain event type.
+  "Adds a handler to the state for a certain event type.
   Returns the handler id."
-  [mode event-type handler]
-  (let [id (swap! (:next-id mode) inc)]
-    (swap! (:handlers mode) assoc-in [event-type id] handler)
-    (swap! (:handler-types mode) assoc id event-type)
+  [state event-type handler]
+  (let [id (swap! (:next-id state) inc)]
+    (swap! (:handlers state) assoc-in [event-type id] handler)
+    (swap! (:handler-types state) assoc id event-type)
     id))
 
 (defn handler
   "Gets the handler associated with the given id
-  in the mode."
-  [mode id]
-  (if-let [et (@(:handler-types mode) id)]
-    (get-in @(:handlers mode) [et id])))
+  in the state."
+  [state id]
+  (if-let [et (@(:handler-types state) id)]
+    (get-in @(:handlers state) [et id])))
 
 (defn remove-handler!
-  "Removes a handler from the mode by id.
+  "Removes a handler from the state by id.
   Returns the handler."
-  [mode id]
-  (if-let [et (@(:handler-types mode) id)]
-    (let [h (get-in @(:handlers mode) [et id])]
-      (swap! (:handler-types mode) dissoc id)
-      (swap! (:handlers mode)
-         (fn [ets e-t i] (assoc ets e-t (dissoc (ets e-t) i)))
-         et
-         id)
+  [state id]
+  (if-let [et (@(:handler-types state) id)]
+    (let [h (get-in @(:handlers state) [et id])]
+      (swap! (:handler-types state) dissoc id)
+      (swap! (:handlers state)
+             (fn [ets e-t i] (assoc ets e-t (dissoc (ets e-t) i)))
+             et
+             id)
       h)))
 
-(defn add-mode!
-  "Adds a mode to the game. A mode is a
+(defn add-state!
+  "Adds a state to the game. A state is a
   function that takes one parameter, game, and updates
-  the game. The mode function is called once every time
+  the game. The state function is called once every time
   through the main loop."
-  [game mode-id mode]
-  (swap! (:modes game) assoc mode-id mode))
+  [game state-id state]
+  (swap! (:states game) assoc state-id state))
 
-(defn remove-mode!
-  "Removes a mode from the game."
-  [game mode-id]
-  (swap! (:modes game) dissoc mode-id))
+(defn remove-state!
+  "Removes a state from the game."
+  [game state-id]
+  (swap! (:states game) dissoc state-id))
 
-(defn current-mode-id
-  "Gets the id of the current mode of the game."
+(defn current-state-id
+  "Gets the id of the current state of the game."
   [game]
-  @(:mode game))
+  @(:state game))
 
-(defn current-mode
-  "Gets the current mode of the game."
+(defn current-state
+  "Gets the current state of the game."
   [game]
-  (get @(:modes game) @(:mode game)))
+  (get @(:states game) @(:state game)))
 
-(defn get-mode
-  "Retrieves a mode by id from the game."
+(defn get-state
+  "Retrieves a state by id from the game."
   [game id]
-  (@(:modes game) id))
+  (@(:states game) id))
 
-(defn set-mode!
-  "Sets the mode of the game. If mode-id
+(defn set-state!
+  "Sets the state of the game. If state-id
   does not exist in the game, does nothing and returns nil. Else
-  sets the game mode and returns the new mode."
-  [game mode-id]
-  (if-let [new-mode (@(:modes game) mode-id)]
+  sets the game state and returns the new state."
+  [game state-id]
+  (if-let [new-state (@(:states game) state-id)]
     (do
-      (reset! (:mode game) mode-id)
-      (reset! (:handlers game) @(:handlers new-mode))
-      (reset! (:handler-types game) @(:handler-types new-mode))
-      new-mode)
+      (reset! (:state game) state-id)
+      (reset! (:handlers game) @(:handlers new-state))
+      (reset! (:handler-types game) @(:handler-types new-state))
+      new-state)
     nil))
 
-(defn modes
-  "Gets all availble modes of the game."
+(defn states
+  "Gets all availble states of the game."
   [game]
-  @(:modes game))
+  @(:states game))
 
-(declare on-key-press! on-key-release! on-key-down!)
+(declare on-key-press! on-key-release! on-key-down! world)
 
-(defn mode
-  "Makes a game mode with specified handlers."
-  [& {:keys [update render handlers key-press key-release key-down world]}]
-  (let [m {:update (or update (fn [] nil))
+(defn state
+  "Makes a game state with specified handlers."
+  [game & {:keys [update render handlers key-press key-release key-down world]}]
+  (let [m {:update update
            :world world
            :handlers (atom {})
            :handler-types (atom {})
+           :game game
+           :render render
            :next-id (atom 0)}]
     (doseq [[k v] handlers]
       (add-handler! m k v))
@@ -532,208 +547,171 @@
       (on-key-down! m k v))
     m))
 
+;;;;; ENTITY AND SYSTEM
 
-;;;;; ENTITY AND SYSTEM STATIC STORAGE ;;;;;
-
-(def ^:no-doc _entities (atom {}))
-(def ^:no-doc _systems (atom {}))
-
-;;;;; ECS DEFTYPE ;;;;;
-
-(deftype ^:private ^:no-doc World [game root ^:mutable systems ^:mutable entities]
+(deftype World [id entities systems-by-priority system-entities]
   Object
-  (toString [_] (str "systems: " (select-keys systems @_systems) ", entities: " (select-keys entities @_entities))))
-(deftype ^:private ^:no-doc Entity [id ^:mutable world ^:mutable properties ^:mutable children]
-  Object
-  (toString [_] (str "id: " id ", properties: "properties))
-  IEquiv
-  (-equiv [_ o] (= id (.-id o))))
-(deftype ^:private ^:no-doc System [id ^:mutable world matcher func one-time-func ^:mutable entities]
-  Object
-  (toString [_] (str "id: " id ", entities: " entities))
-  IEquiv
-  (-equiv [_ o] (= id (.-id o))))
+  (toString [_] (str "World " id))
+  IHash
+  (-hash [_] id))
 
-(let [next-id (atom 0)]
-  (defn- ^:no-doc uid [] (swap! next-id inc)))
+(deftype System [id matcher func one-time-func]
+  Object
+  (toString [_] (str "System " id))
+  IHash
+  (-hash [_] id))
 
-;;;;; ENTITY AND SYSTEM ;;;;;
+(deftype Entity [id ^:mutable changed-in-worlds]
+  Object
+  (toString [_] (str "Entity " id))
+  IHash
+  (-hash [_] id))
+
+(let [nid (atom 0)] (defn- uid [] (swap! nid inc)))
+
+(defn id
+  "Gets the id of a world, system, or entity."
+  [x]
+  (.-id x))
 
 (defn entity?
   "Is x an entity?"
   [x]
   (= Entity (type x)))
 
-(defn world?
-  "Is x a world?"
-  [x]
-  (= World (type x)))
-
 (defn system?
   "Is x a system?"
   [x]
   (= System (type x)))
 
-(defn- ^:no-doc try-add!
-  [system-id entity-id]
-  (let [s (get @_systems system-id)
-        m (.-matcher s)
-        e (get @_entities entity-id)]
-    (if (m e)
-      (set! (.-entities s) (conj (.-entities s) entity-id)))))
+(defn world?
+  "Is x a world?"
+  [x]
+  (= World (type x)))
 
 (defn entity
   "Creates a new entity."
-  [properties & children]
-  (let [id (uid)
-        e (Entity. id nil properties (set (map #(.-id %) children)))]
-    (swap! _entities assoc id e)
-    e))
-
-(defn entity-by-id
-  "Gets an entity by it's id."
-  [id]
-  (get @_entities id))
-
-(defn system-by-id
-  "Gets a system by it's id."
-  [id]
-  (get @_systems id))
-
-(defn prop
-  "Get a property of an entity."
-  [entity property]
-  (get (.-properties entity) property))
-
-(defn set-prop!
-  "Sets a property of an entity."
-  [entity property value]
-  (if (get (.-properties entity) property)
-    (set! (.-properties entity) (assoc (.-properties entity) property value))
-    (do
-      (set! (.-properties entity) (assoc (.-properties entity) property value))
-      (doseq [s-id (.-systems (.-world entity))]
-        (try-add! s-id (.-id entity))))))
-
-(defn swap-prop!
-  "Similar to swap! on atoms."
-  [entity property f & args]
-  (let [prev (prop entity property)
-        new (apply f prev args)
-        props (.-properties entity)]
-    (set-prop! entity property new)
-    new))
+  [& properties]
+  (loop [e (Entity. (uid) {})
+         p (partition 2 properties)]
+    (if (empty? p)
+      e
+      (let [[k v] (first p)]
+        (aset e (name k) v)
+        (recur e (rest p))))))
 
 (defn matcher
   "Creates a new system matcher. A system matcher matches entities to systems based
   on their properties."
   ([required excluded one-required]
    (fn [e]
-     (let [f #(get (.-properties e) %)]
+     (let [f #(aget e (name %))]
        (and
         (every? f required)
         (not-any? f excluded)
         (some f one-required)))))
   ([required excluded]
    (fn [e]
-     (let [f #(get (.-properties e) %)]
+     (let [f #(aget e (name %))]
        (and
         (every? f required)
         (not-any? f excluded)))))
   ([required]
    (fn [e]
-     (let [f #(get (.-properties e) %)]
+     (let [f #(aget e (name %))]
        (every? f required)))))
 
 (defn system
-  "Creates a new system. Systems process entities, which hold game data."
-  ([matcher func once-per-frame-func]
-   (let [id (uid)
-         s (System. id nil matcher func once-per-frame-func #{})]
-     (swap! _systems assoc id s)
-     s))
-  ([matcher func]
-   (system matcher func (fn [] nil))))
+  "Creates a new system. Systems process entities, which hold the game data."
+  ([matcher per-entity-func]
+   (System. (uid) matcher per-entity-func (fn [] nil)))
+  ([matcher per-entity-func func]
+   (System. (uid) matcher per-entity-func func)))
+
+(defn- try-add-entity-to-system!
+  [^ World world ^Entity entity ^System system]
+  (swap! (.-system-entities world) update-in [system] (if ((.-matcher system) entity) conj disj) entity))
+
+(defn prop
+  "Gets a property of an entity."
+  [e property]
+  (aget e (name property)))
+
+(defn- ^:no-doc xor [a b] (or (and a (not b)) (and (not a) b)))
+
+(defn- ^:no-doc fmap [f m]
+  (into {} (for [[k v] m] [k (f v)])))
+
+(defn set-prop!
+  "Sets a property of an entity. Returns the new value."
+  [e property value]
+  (if (xor (prop e property) value)
+    (set! (.-changed-in-worlds e) (fmap (fn [x] true) (.-changed-in-worlds e))))
+  (aset e (name property) value)
+  value)
+
+(defn swap-prop!
+  "Similar to swap! on atoms."
+  [e property f & args]
+  (set-prop! e property (apply f (prop e property) args)))
 
 (defn add-system!
-  "Adds a system to the world. Returns the world."
-  [world system]
-  (set! (.-world system) world)
-  (set! (.-systems world) (conj (.-systems world) (.-id system)))
-  (doseq [e-id (.-entities world)]
-    (try-add! (.-id system) e-id))
-  world)
-
-(defn- ^:no-doc add-child!
-  [world entity]
-  (set! (.-world entity) world)
-  (set! (.-entities world) (conj (.-entities world) (.-id entity)))
-  (doseq [s-id (.-systems world)]
-    (try-add! s-id (.-id entity)))
-  (doseq [c (.-children entity)]
-    (add-child! world (get @_entities c))))
+  "Adds a system to the world."
+  [world system priority]
+  (swap! (.-systems-by-priority world) assoc system priority)
+  (swap! (.-system-entities world) assoc system #{})
+  (doseq [e @(.-entities world)]
+    (try-add-entity-to-system! world e system)))
 
 (defn add-entity!
-  "Adds an entity to the world and recursively adds children. Returns the world."
+  "Adds an entity to the world."
   [world entity]
-  (add-child! world entity)
-  (set! (.-children (.-root world)) (conj (.-children (.-root world)) (.-id entity)))
-  world)
+  (swap! (.-entities world) conj entity)
+  (set! (.-changed-in-worlds entity) (assoc (.-changed-in-worlds entity) world true)))
+
+(defn remove-entity!
+  "Removes an entity from a world. Returns the entity."
+  [world entity]
+  (swap! (.-entities world) disj entity)
+  (swap! (.-system-entities world) (fn [ses] (fmap #(disj % entity) ses)))
+  entity)
+
+(defn remove-system!
+  "Removes a system from the world. Returns the system."
+  [world system]
+  (swap! (.-systems-by-priority world) dissoc system)
+  (swap! (.-system-entities world) dissoc system)
+  system)
 
 (defn add!
-  "Adds systems and entities to a world. Returns the world."
+  "Adds systems and entities to the world. Returns the world."
   [world & items]
-  (let [ents (filter entity? items)
-        systs (filter system? items)]
-    (reduce add-entity! (reduce add-system! world systs) ents)))
-
-(defn remove!
-  "Removes systems and entities from their worlds. If removing
-  an entity, children are recursively removed."
-  [& items]
-  (doseq [i items]
-    (if (system? i)
-      (do
-        (set! (.-systems (.-world i)) (disj (.-systems (.-world i)) (.-id i))))
-      (when (entity? i)
-        (set! (.-entities (.-world i)) (disj (.-entities (.-world i)) (.-id i)))
-        (apply remove! (.-children i)))))
-  nil)
-
-(defn destroy!
-  "Destroys entities and systems, removing them from their worlds.
-  Children of entities are recursively destroyed."
-  [& items]
-  (apply remove! items)
-  (doseq [i items]
-    (if (entity? i)
-      (swap! _entities dissoc (.-id i))
-      (swap! _systems dissoc (.-id i))))
-  nil)
-
-;;;;; WORLD ;;;;;
+  (let [counter (atom 0)]
+    (doseq [i items]
+      (if (= (type i) System)
+        (add-system! world i (swap! counter inc))
+        (add-entity! world i))))
+  world)
 
 (defn world
   "Creates a new world."
-  [game & items]
-  (let [r (entity {::root true})
-        r-id (.-id r)
-        w (World. game r #{} #{r-id})]
-    (set! (.-world r) w)
-    (apply add! w items)))
+  [& items]
+  (apply add! (World. (uid) (atom #{}) (atom (priority-map)) (atom {})) items))
 
-(defn- ^:no-doc update!
-  "Updates a world."
+(defn update!
+  "Updates the world."
   [world]
-  (doseq [s-id (.-systems world)]
-    (let [s (get @_systems s-id)]
-      ((.-one-time-func s))
-      (doseq [e-id (.-entities s)]
-        (let [e (get @_entities e-id)]
-          ((.-func s) e)))
-      (handle-events! (.-game world)))))
+  (doseq [e @(.-entities world)]
+    (when (get (.-changed-in-worlds e) world)
+      (doseq [s (keys @(.-systems-by-priority world))]
+        (try-add-entity-to-system! world e s))
+      (set! (.-changed-in-worlds e) (assoc (.-changed-in-worlds e) world false))))
+  (doseq [s (keys @(.-systems-by-priority world))]
+    ((.-one-time-func s))
+    (doseq [e (get @(.-system-entities world) s)]
+      ((.-func s) e))))
 
-;;;;; KEYBOARD ;;;;;
+;;;;; KEYBOARD
 
 (def ^:private ^:no-doc downkeys (atom {}))
 
@@ -862,18 +840,18 @@
 
 (defn on-key-press!
   "Adds an event handler for key presses."
-  [mode k fn1]
-  (add-handler! mode [:keypress k] fn1))
+  [state k fn1]
+  (add-handler! state [:keypress k] fn1))
 
 (defn on-key-down!
   "Adds an event handler for key presses."
-  [mode k fn1]
-  (add-handler! mode [:keydown k] fn1))
+  [state k fn1]
+  (add-handler! state [:keydown k] fn1))
 
 (defn on-key-release!
   "Adds an event handler for key releases."
-  [mode k fn1]
-  (add-handler! mode [:keyrelease k] fn1))
+  [state k fn1]
+  (add-handler! state [:keyrelease k] fn1))
 
 (defn ^:no-doc enqueue-keys!
   "Enqueues keyboard events. This should be called once a frame."
@@ -896,7 +874,7 @@
   (reset! pressedkeys {})
   (reset! releasedkeys {}))
 
-;;;;; GLOBAL KEYBOARD SETUP ;;;;;
+;;;;; GLOBAL KEYBOARD SETUP
 
 (.addEventListener js/window "keydown" (fn [ev]
                                          (let [k (event-key ev)]
@@ -907,7 +885,7 @@
                                        (let [k (event-key ev)]
                                          (swap! releasedkeys assoc k ev))))
 
-;;;;; MOUSE ;;;;;
+;;;;; MOUSE
 
 (def ^:private ^:no-doc mouse-position (atom [0 0]))
 
@@ -934,7 +912,7 @@
   [game]
   ((mouse-pos game) 1))
 
-;;;;; GLOBAL MOUSE SETUP ;;;;;
+;;;;; GLOBAL MOUSE SETUP
 
 (.addEventListener js/window "mousemove" (fn [e]
                                            (reset!
@@ -946,14 +924,14 @@
   [game]
   (aset (:canvas game) "onclick" (fn [ev] (enqueue-event! game :click ev))))
 
-;;;;; GAME FUNCTIONS ;;;;;
+;;;;; GAME FUNCTIONS
 
 (defn game
   "Creates a new game."
   ([width height canvas]
    (let [gl (gl/create-context canvas)
-         g {:modes (atom nil)
-            :mode (atom nil)
+         g {:states (atom nil)
+            :state (atom nil)
             :width width
             :height height
             :loop (atom true)
@@ -962,7 +940,7 @@
             :handlers (atom nil)
             :handler-types (atom nil)
             :gl gl
-            :audio-context (sound/create-context)
+            :audio-context (create-audio-context)
             :dt (atom 0)
             :now (atom (/ (.getTime (js/Date.)) 1000))}]
      (set! (.-width canvas) width)
@@ -1015,65 +993,55 @@
     (reset! (:dt game) dt)))
 
 (defn- ^:no-doc game-loop!
-  [game mode-id callback-caller]
-  (reset! (:mode game) mode-id)
+  [game state-id callback-caller]
+  (reset! (:state game) state-id)
   (reset! (:loop game) true)
   ((fn cb []
      (when @(:loop game) (callback-caller cb))
-     (let [m (@(:modes game) @(:mode game))]
+     (let [m (@(:states game) @(:state game))]
        (enqueue-keys! game)
        (update-time game)
-       ((:update m))
+       (if (:update m) ((:update m)))
        (if (:world m) (update! (:world m)))
+       (if (:render m) ((:render m)))
        (handle-events! game)))))
 
 (defn main-loop!
   "Runs the main loop of a game. If no fps
   is provided, will run at native fps."
   ([game fps]
-   (game-loop! game @(:mode game)
+   (game-loop! game @(:state game)
                (fn [cb]
                  (js/setTimeout cb (/ 1000 fps)))))
   ([game]
-   (game-loop! game @(:mode game) js/requestAnimationFrame)))
+   (game-loop! game @(:state game) js/requestAnimationFrame)))
 
 (defn end-game!
   "Ends the main loop of the game."
   [game]
   (reset! (:loop game) false))
 
-;;;;; DEFAULT SYSTEMS ;;;;;
+;;;;; DEFAULT SYSTEMS
 
-(defn matrix-system
-  [game]
-  (system
-   (matcher [::root])
-   (fn cb
-     ([e]
-      (cb e m/m-identity4)
-      e)
-     ([e xform]
-      (let [local-xform (or (prop e :local-transform) m/m-identity4)]
-        (set-prop! e :global-transform (m/mult local-xform xform))
-        (doseq [c (.-children e)]
-          (cb (entity-by-id c) (prop e :global-transform))))))))
-
-(let [origin (m/vec3 0 0 0)
+(let [origin (m/vec2 0 0)
       i2 (m/vec2 1 1)]
   (defn transform2d-system
     [game]
+    "Creates a system that updates entities' local transformations
+    by anylyzing their position, rotation, and scale."
     (system
-     (matcher [] [] [:position :rotation :scale :offset])
+     (matcher [] [] [:position :rotation :scale])
      (fn [e]
        (let [p (or (prop e :position) origin)
              r (or (prop e :rotation) 0)
              s (or (prop e :scale) i2)]
-         (set-prop! e :local-transform (m/mult
-                                        (m/m-scale s)
-                                        (m/m-rotate-z r)
-                                        (m/m-translate p))))))))
+         (if (not (prop e :local-transform))
+           (set-prop! e :local-transform (m/scalexy-rotatez-translatexy (.-x s) (.-y s) r (.-x p) (.-y p)))
+           (m/scalexy-rotatez-translatexy (prop e :local-transform) (.-x s) (.-y s) r (.-x p) (.-y p))))))))
 
 (defn render-system
+  "Creates a simple render system that renders the :drawable property
+  of entities."
   [game]
   (let [gl (:gl game)
         shader (texture-shader gl)
@@ -1082,7 +1050,7 @@
     (system
      (matcher [:drawable])
      (fn [e]
-       (let [m (or (prop e :global-transform) m/m-identity4)
+       (let [m (or (prop e :global-transform) (prop e :local-transform) m/m-identity4)
              d (prop e :drawable)]
          (gl/set-uniform! gl :modelViewMatrix m)
          (p/-draw! d)))
@@ -1093,20 +1061,21 @@
                                   :color color
                                   :tDiffuse 0})))))
 
-(defn movement2d-system
-  [game]
-  (system
-   (matcher [:velocity])
-   (fn [e]
-     (if (not (prop e :position)) (set-prop! e :position (m/v 0 0 0)))
-     (swap-prop! e :position m/add (m/mult (m/v3 (prop e :velocity)) (delta game)))
-     nil)))
+(let [origin (m/v 0 0 0)]
+  (defn movement-system
+    "Creates a system that moves an entity's :position based on its :velocity."
+    [game]
+    (system
+     (matcher [:velocity :position])
+     (fn [e]
+       (if (not= (prop e :velocity) origin) (swap-prop! e :position m/add (m/mult (m/v3 (prop e :velocity)) (delta game))))
+       nil))))
 
 (defn rotate2d-system
+  "Creates a system that changes an entity's :rotation based on its :angular-velocity."
   [game]
   (system
-   (matcher [:angular-velocity])
+   (matcher [:angular-velocity :rotation])
    (fn [e]
-     (if (not (prop e :rotation)) (set-prop! e :rotation 0))
-     (swap-prop! e :rotation + (* (prop e :angular-velocity) (delta game)))
+     (if (not= (prop e :angular-velocity) 0) (swap-prop! e :rotation + (* (prop e :angular-velocity) (delta game))))
      nil)))

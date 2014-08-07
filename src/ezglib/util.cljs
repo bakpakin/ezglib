@@ -1,6 +1,6 @@
 (ns ezglib.util)
 
-;;;;; TYPED ARRAYS ;;;;;
+;;;;; TYPED ARRAYS
 
 (defn int8
   "Creates a native Int8Array for a given `collection`."
@@ -62,7 +62,7 @@
      (= value-type js/Float32Array)
      (= value-type js/Float64Array))))
 
-;;;;; LOGGING ;;;;;
+;;;;; LOGGING
 
 (def ^:dynamic *log-fn* (fn [& messages] (.log js/console (apply str messages))))
 
@@ -71,14 +71,14 @@
   [& messages]
   (apply *log-fn* messages))
 
-;;;;; TIME ;;;;;
+;;;;; TIME
 
 (defn now
   "Gets the current time in milliseconds."
   []
   (.getTime (js/Date.)))
 
-;;;;; PATH ;;;;;
+;;;;; PATH
 
 (def ^:private ^:no-doc extension-matcher #"(\w+)$")
 
