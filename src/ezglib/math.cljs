@@ -2,7 +2,7 @@
   (:require [clojure.string :as string]
             [ezglib.protocol :as p]))
 
-;;;;; DEFTYPE ;;;;;
+;;;;; DEFTYPE
 
 (deftype Matrix ^:no-doc [elements rows cols ^:mutable ta]
   Object
@@ -111,8 +111,8 @@
   (-seq [_] (list x y))
   IEquiv
   (-equiv [this o] (if (= (type o) Vec2)
-                  (and (identical? x (.-x o)) (identical? y (.-y o)))
-                  (= (-seq this) (-seq o))))
+                     (and (identical? x (.-x o)) (identical? y (.-y o)))
+                     (= (-seq this) (-seq o))))
   IIndexed
   (-nth [_ n] (case n 0 x 1 y nil))
   (-nth [_ n not-found] (case n 0 x 1 y not-found)))
@@ -142,8 +142,8 @@
   (-seq [_] (list x y z))
   IEquiv
   (-equiv [this o] (if (= (type o) Vec3)
-                  (and (identical? x (.-x o)) (identical? y (.-y o)) (identical? z (.-z o)))
-                  (= (-seq this) (-seq o))))
+                     (and (identical? x (.-x o)) (identical? y (.-y o)) (identical? z (.-z o)))
+                     (= (-seq this) (-seq o))))
   IIndexed
   (-nth [_ n] (case n 0 x 1 y 2 z nil))
   (-nth [_ n not-found] (case n 0 x 1 y 2 z not-found)))
@@ -173,8 +173,8 @@
   (-seq [_] (list w x y z))
   IEquiv
   (-equiv [this o] (if (= (type o) Vec4)
-                  (and (identical? w (.-w o)) (identical? x (.-x o)) (identical? y (.-y o)) (identical? z (.-z o)))
-                  (= (-seq this) (-seq o))))
+                     (and (identical? w (.-w o)) (identical? x (.-x o)) (identical? y (.-y o)) (identical? z (.-z o)))
+                     (= (-seq this) (-seq o))))
   IIndexed
   (-nth [_ n] (case n 0 w 1 x 2 y 3 z nil))
   (-nth [_ n not-found] (case n 0 w 1 x 2 y 3 z not-found)))
@@ -198,14 +198,14 @@
                      (if (= (count es) (count (.-es b))) (VecN. (mapv * es (.-es b)) nil))))
   p/IDivide
   (-divide [_ b] (if (number? b)
-                     (VecN. (mapv #(/ b %) es) nil)
-                     (if (= (count es) (count (.-es b))) (VecN. (mapv / es (.-es b)) nil))))
+                   (VecN. (mapv #(/ b %) es) nil)
+                   (if (= (count es) (count (.-es b))) (VecN. (mapv / es (.-es b)) nil))))
   ISeqable
   (-seq [_] es)
   IEquiv
   (-equiv [x o] (= (-seq x) (-seq o))))
 
-;;;;; OPERATIONS ;;;;;
+;;;;; OPERATIONS
 
 (defn add
   "Like +, but works with matricies, vectors, etc."
@@ -229,7 +229,7 @@
   ([a b & more]
    (reduce mult (mult a b) more)))
 
- (defn sub
+(defn sub
   "Like -, but works with matricies, vectors, etc."
   ([a]
    (if (number? a)
@@ -254,7 +254,7 @@
   ([a b & more]
    (reduce div (div a b) more)))
 
-;;;;; MATRIX ;;;;;
+;;;;; MATRIX
 
 (defn m
   "Creates a new matrix. elements should be a nested collection that contains
@@ -289,9 +289,11 @@
   [matrix]
   (Matrix. (apply mapv vector (.-elements matrix)) (.-cols matrix) (.-rows matrix) nil))
 
-;;;; GL UTIL MATRIX FUNCTIONS ;;;;;
+;;;; GL UTIL MATRIX FUNCTIONS
 
 (def ^:private ^:no-doc deg-to-rad (/ (.-PI js/Math) 180))
+
+(def m-identity4 ^{:doc "The 4x4 identity matrix."} (m-identity 4))
 
 ;Shamelessly stolen from gluPerspective. See http://www.opengl.org/wiki/GluPerspective_code
 (defn m-perspective
@@ -389,6 +391,8 @@
               [0  0  1  0]
               [0  0  0  1]] 4 4 nil)))
 
+(declare v3)
+
 (defn m-translate
   "Constructs a translation matrix."
   ([x y z]
@@ -396,8 +400,8 @@
              [0 1 0 0]
              [0 0 1 0]
              [x y z 1]] 4 4 nil))
-  ([v3]
-   (m-translate (.-x v3) (.-y v3) (.-z v3))))
+  ([v]
+   (let [v3 (v3 v)] (m-translate (.-x v3) (.-y v3) (.-z v3)))))
 
 (defn m-scale
   "Constructs a scaling matrix."
@@ -406,10 +410,10 @@
              [0 y 0 0]
              [0 0 z 0]
              [0 0 0 1]] 4 4 nil))
-  ([v3]
-   (m-scale (.-x v3) (.-y v3) (.-z v3))))
+  ([v]
+   (let [v3 (v3 v)] (m-scale (.-x v3) (.-y v3) (.-z v3)))))
 
-;;;;; VECTOR ;;;;;
+;;;;; VECTOR
 
 (defn v2
   "Creates a 2d vector from another vector. Extra
@@ -462,6 +466,21 @@
   ([w x y z & more]
    (VecN. (apply vector w x y z more) nil)))
 
+(defn vec2
+  "Creates a 2d vector."
+  [x y]
+  (Vec2. x y nil))
+
+(defn vec3
+  "Creates a 3d vector."
+  [x y z]
+  (Vec3. x y z nil))
+
+(defn vec4
+  "Creates a 4d vector."
+  [w x y z]
+  (Vec4. w x y z nil))
+
 (defn v-dot
   "Returns the vector dot product of two vectors."
   [a b]
@@ -483,3 +502,27 @@
      (- (* bx az) (* ax bz))
      (- (* ax by) (* ay bx))
      nil)))
+
+;;;;; GL UTIL
+
+(defn scalexy-rotatez-translatexy
+  "Creates a shader uniform from an xy scaling transformation, a z rotation, and an xy translation. Useful for 2d games."
+  ([xs ys rz xt yt]
+   (let [rad (* deg-to-rad rz)
+         c (.cos js/Math rad)
+         s (.sin js/Math rad)]
+     (js/Float32Array. (array (* c xs) (* s ys) 0 0
+                              (* -1 s xs) (* c ys) 0 0
+                              0 0 1 0
+                              xt yt 0 1))))
+  ([f32 xs ys rz xt yt]
+   (let [rad (* deg-to-rad rz)
+         c (.cos js/Math rad)
+         s (.sin js/Math rad)]
+     (aset f32 0 (* c xs))
+     (aset f32 1 (* s ys))
+     (aset f32 12 xt)
+     (aset f32 4 (* -1 s xs))
+     (aset f32 5 (* c ys))
+     (aset f32 13 yt))
+   f32))

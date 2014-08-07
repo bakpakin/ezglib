@@ -1,6 +1,6 @@
 (ns ezglib.protocol)
 
-;;;;; MATH ;;;;;
+;;;;; MATH
 
 (defprotocol IAdd
   (-add [this other]))
@@ -17,21 +17,21 @@
 (defprotocol IInverse
   (-inverse [this]))
 
-;;;;; GL ;;;;;
+;;;;; GL
 
 (defprotocol ITypedArray
   "Types that extend the ITypedArray protocol can be converted
   to javascript typed arrays for in use in shader uniforms."
   (-typed-array [this]))
 
-;;;;; 3D ;;;;;
+;;;;; 3D
 
 (defprotocol I3D
   (-matrix [this]))
 
 (defprotocol IDrawable
   (-draw! [this] "Types that implement -draw should assume
-          That the shader and projection matrix have
+          that the shader and projection matrix have
           already been applied. Textures, attributes, and other uniforms may be
           applied as needed. Implementations should then use ezglib.gl.draw-arrays! or
           ezglib.gl.draw-elements! to draw to the drawing buffer."))
