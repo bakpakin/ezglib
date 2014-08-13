@@ -43,8 +43,28 @@
     ret))
 
 (defn load!
-  "Loads assets async. Returns an atom that encapsulates
-  the progress of loading as number between 0 and 1."
+  "Loads assets async, and binds them to identifiers for later use.
+  Loaded assets can be retrieved via ezglib.core/asset. load!
+  returns an atom that encapsulates
+  the progress of loading as a number between 0 and 1.
+
+  load! requires an instance of game (created via ezglib.core/game),
+  and takes variadic arguments in map form.
+
+  :assets - a vector of vectors representing the assets to load.
+  Should take the form [[:asset-type new-asset-id & loading-arguments]].
+  For example, (load! game
+  :assets [[:sound :beep \"assets/beep.wav\"]
+  [:sound :click \"assets/click.wav\"]])
+  will load two sounds and store them as assets named :click and :beep.
+
+  :asset-group (optional) - the asset group to load the asset into. Asset groups
+  can be used to organize assets.
+
+  :update (optional) - a function that's called every frame while the loading
+  hasn't finished. Takes one parameter, the progress as a value from 0 to 1.
+
+  :on-load (optional) - a callback function that is called when loading is finished."
   ([game & args]
    (let [mp (apply hash-map args)
          type-id-args (or (mp :assets) [])
@@ -134,7 +154,7 @@
   (let [c (or (aget js/window "AudioContext") (aget js/window "webkitAudioContext"))]
     (c.)))
 
-(defn play
+(defn play!
   "Plays a sound."
   [sound]
   (let [context (.-context sound)
@@ -297,10 +317,8 @@
 ;;;;; CAMERAS
 
 (deftype ^{:no-doc true} Camera2D [x y hw hh angle pos matrix]
-  p/I3D
-  (-matrix [_] matrix)
-  p/IPosition
-  (-position [_] pos))
+  p/ITypedArray
+  (-typed-array [_] (p/-typed-array matrix)))
 
 (defn camera-2d
   "Constructs a 2D camera."
@@ -428,9 +446,8 @@
   (if (seq (get @(:handlers game) event-type))
     (swap! (:event-queue game) conj [event-type (vec params)])))
 
-(defn ^:no-doc handle-events!
-  "Executes all event handlers in the game-state for the currently queued events.
-  Users of this library should not usually have to call this."
+(defn ^:private ^:no-doc handle-events!
+  "Executes all event handlers in the game-state for the currently queued events."
   [game]
   (enqueue-event! game ::end-update)
   (let [event-queue (:event-queue game)]
@@ -480,10 +497,10 @@
       h)))
 
 (defn add-state!
-  "Adds a state to the game. A state is a
-  function that takes one parameter, game, and updates
-  the game. The state function is called once every time
-  through the main loop."
+  "Adds a state to the game. A state is created via
+  ezglib.core/state, and encapsulates an update and render function
+  for the game, as well as event handlers. A game state also can contain
+  a entity-component-system world, created vie ezglib.core/world."
   [game state-id state]
   (swap! (:states game) assoc state-id state))
 
@@ -528,7 +545,22 @@
 (declare on-key-press! on-key-release! on-key-down! world)
 
 (defn state
-  "Makes a game state with specified handlers."
+  "Makes a game state with specified handlers. Options:
+
+  :update (optional) - a function called once a frame while this game state is active.
+
+  :render (optional) - a function called after :update and default rendering for custom drawing.
+
+  :handlers (optional) - a map of event-types to handler functions. When
+  the event is trigger and the given event-type is pushed to the event-queue, all
+  handlers in the game state are called.
+
+  :world (optional) - a world created via ezglib.core/world that encapsulates
+  entities, systems, and components.
+
+  :key-press, :key-release, :key-down (optional) - maps of keys as keywords to handlers.
+  For example, to log to console when the space bar is pressed, one would add
+  the option :key-press {:space (fn [key-event] (.log js/console \"Space Pressed!\"))}"
   [game & {:keys [update render handlers key-press key-release key-down world]}]
   (let [m {:update update
            :world world
@@ -1042,24 +1074,24 @@
 (defn render-system
   "Creates a simple render system that renders the :drawable property
   of entities."
-  [game]
-  (let [gl (:gl game)
-        shader (texture-shader gl)
-        proj (m/m-ortho 0 (:width game) (:height game) 0 -1000000 1000000)
-        color (m/v 1 1 1 1)]
-    (system
-     (matcher [:drawable])
-     (fn [e]
-       (let [m (or (prop e :global-transform) (prop e :local-transform) m/m-identity4)
-             d (prop e :drawable)]
-         (gl/set-uniform! gl :modelViewMatrix m)
-         (p/-draw! d)))
-     (fn []
-       (gl/clear! gl)
-       (gl/use-shader! gl shader
-                       :uniforms {:projectionMatrix proj
-                                  :color color
-                                  :tDiffuse 0})))))
+  ([game & {:keys [shader camera color]}]
+   (let [gl (:gl game)
+         shader (or shader (texture-shader gl) )
+         camera (or camera (m/m-ortho 0 (:width game) (:height game) 0 -1000000 1000000))
+         color (or color (m/v 1 1 1 1))]
+     (system
+      (matcher [:drawable])
+      (fn [e]
+        (let [m (or (prop e :local-transform) m/m-identity4)
+              d (prop e :drawable)]
+          (gl/set-uniform! gl :modelViewMatrix m)
+          (p/-draw! d)))
+      (fn []
+        (gl/clear! gl)
+        (gl/use-shader! gl shader
+                        :uniforms {:projectionMatrix camera
+                                   :color color
+                                   :tDiffuse 0}))))))
 
 (let [origin (m/v 0 0 0)]
   (defn movement-system

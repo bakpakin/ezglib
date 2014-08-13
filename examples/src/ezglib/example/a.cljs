@@ -10,11 +10,14 @@
   (let [w (ez/world
            (ez/render-system game)
            (hello))]
-    (ez/state game :world w)))
+    (ez/state game
+              :world w
+              :key-press {:space #(ez/play! (ez/asset :beep))})))
 
 (let [game (ez/game 600 600)]
   (ez/load! game
-            :assets [[:text :hi "Arial" 60 "Hello World!"]]
+            :assets [[:sound :beep "assets/beep.wav"]
+                     [:text :hi "Arial" 60 "Hello World!"]]
             :on-load (fn []
                        (ez/add-state! game :start (start-state game))
                        (ez/set-state! game :start)
