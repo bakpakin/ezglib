@@ -21,4 +21,6 @@
                                         :pretty-print true
                                         :source-map "examples/js/cljs.js.map"}}}}
   :codox {:language :clojurescript
-          :exclude clojure.string})
+          :include [ezglib.core ezglib.gl ezglib.util ezglib.math ezglib.protocol]
+          :src-dir-uri "http://github.com/bakpakin/ezglib/blob/master/"
+          :src-linenum-anchor-prefix "L"})
