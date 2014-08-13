@@ -2,6 +2,67 @@
   (:require [clojure.string :as string]
             [ezglib.protocol :as p]))
 
+;;;;; TRIG
+
+(def deg-to-rad (/ (.-PI js/Math) 180))
+(def rad-to-deg (/ 180 (.-PI js/Math)))
+
+(defn sin
+  [rad]
+  (.sin js/Math rad))
+
+(defn sin*
+  [theta]
+  (.sin js/Math (* deg-to-rad theta)))
+
+(defn cos
+  [rad]
+  (.cos js/Math rad))
+
+(defn cos*
+  [theta]
+  (.cos js/Math (* deg-to-rad theta)))
+
+(defn tan
+  [rad]
+  (.tan js/Math rad))
+
+(defn tan*
+  [theta]
+  (.tan js/Math (* deg-to-rad theta)))
+
+(defn asin
+  [x]
+  (.asin js/Math x))
+
+(defn asin*
+  [x]
+  (* rad-to-deg (.asin js/Math x)))
+
+(defn acos
+  [x]
+  (.acos js/Math x))
+
+(defn acos*
+  [x]
+  (* rad-to-deg (.acos js/Math x)))
+
+(defn atan
+  [x]
+  (.atan js/Math x))
+
+(defn atan*
+  [x]
+  (* rad-to-deg (.atan js/Math x)))
+
+(defn atan2
+  [y x]
+  (.atan2 js/Math y x))
+
+(defn atan2*
+  [y x]
+  (* rad-to-deg (.atan2 js/Math y x)))
+
 ;;;;; DEFTYPE
 
 (deftype Matrix ^:no-doc [elements rows cols ^:mutable ta]
@@ -290,8 +351,6 @@
   (Matrix. (apply mapv vector (.-elements matrix)) (.-cols matrix) (.-rows matrix) nil))
 
 ;;;; GL UTIL MATRIX FUNCTIONS
-
-(def ^:private ^:no-doc deg-to-rad (/ (.-PI js/Math) 180))
 
 (def m-identity4 ^{:doc "The 4x4 identity matrix."} (m-identity 4))
 

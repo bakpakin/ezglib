@@ -1,17 +1,34 @@
 (ns ezglib.example.a
-  (:require [ezglib.core :as ez]))
+  (:require [ezglib.core :as ez]
+            [ezglib.math :refer [v add sin*]]))
 
 (defn hello
   []
-  (ez/entity :drawable (ez/asset :hi)))
+  (ez/entity
+   :velocity (v 5 20)
+   :position (v 0 -40)
+   :drawable (ez/asset :hi)))
+
+(defn set-path!
+  [e]
+  (let [vel (ez/prop e :velocity)
+        vx (.-x vel)
+        vy (.-y vel)
+        l2 (+ (* vx vx) (* vy vy))
+        l (.sqrt js/Math l2)]
+    (ez/set-prop! e :velocity (v (* l (sin* 90)) 0))))
 
 (defn start-state
   [game]
-  (let [w (ez/world
+  (let [h (hello)
+        w (ez/world
+           (ez/movement-system game)
+           (ez/transform2d-system game)
            (ez/render-system game)
-           (hello))]
+           h)]
     (ez/state game
               :world w
+              :handlers {:click #(set-path! h)}
               :key-press {:space #(ez/play! (ez/asset :beep))})))
 
 (let [game (ez/game 600 600)]

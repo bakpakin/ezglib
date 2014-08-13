@@ -437,9 +437,9 @@
 
   :data must be a typed array-buffer.
 
-  :target (optional) must be either ezglib.render.gl/array-buffer (default) or ezglib.render.gl/element-array-buffer.
+  :target (optional) must be either ezglib.gl/array-buffer (default) or ezglib.gl/element-array-buffer.
 
-  :usage (optional) must be either ezglib.render.gl/static-draw (default) or ezglib.render.gl/dynamic-draw.
+  :usage (optional) must be either ezglib.gl/static-draw (default) or ezglib.gl/dynamic-draw.
 
   :item-size (optional)."
   [gl & {:keys [data target usage item-size] :as args}]
@@ -827,29 +827,51 @@
    (.drawElements gl draw-mode count (.-dataType buffer) offset)
    gl))
 
-(def ^:no-doc ^:private default-capabilities
-  {blend                    true
-   cull-face                false
-   depth-test               true
-   dither                   true
-   polygon-offset-fill      false
-   sample-alpha-to-coverage true
-   sample-coverage          false
-   scissor-test             false
-   stencil-test             false})
-
 (defn draw!
-  "Draws to the gl context."
+  "Draws to the gl context.
+
+  Options:
+
+  :shader - ezglib shader to draw with.
+
+  :draw-mode - A draw-mode such as ezglib.gl/triangles
+
+  :count - the number of verticies to draw.
+
+  :first (optional) - the first index to begin drawing. Default is 0.
+
+  :uniforms (optional) - a map of shader uniforms to their values. Uniform names
+  are given in their keyword form (a uniform named \"uMyUniform\" becomes :uMyUniform),
+  and values can be numbers, javascript typed arrays, or any type that implements
+  ezglib.protocol.ITypedArray.
+
+  :attributes (optional) - similar to :uniforms, but instead of typed arrays, values
+  must be buffers created via ezglib.gl/buffer.
+
+  :textures (optional) - a map of integers from 0 to 32 to textures. In order to
+  use textures in shaders, set the texture uniform in :uniforms to the same number specified in :textures.
+
+  :blend-src (optional) - The source component for the belnding function, if blending is enabled.
+
+  :blend-dest (optional) - The destination component for the belnding function, if blending is enabled.
+
+  :capabilities (optional) - a map of capabilities to booleans indicating if they are enabled.
+
+  :element-buffer (optional) - When drawing by element, :element-buffer should be a buffer created via
+  ezglib.gl/buffer of type UInteger16. By default, drawArrays is called.
+
+  :element-offset (optional) - When drawing elements, :element-offset specifies the offset from which
+  to begin drawing."
+
   [gl & {:keys [uniforms attributes textures shader draw-mode first count
-                blending? blend-src blend-dest capabilities element-buffer element-offset]}]
+                blend-src blend-dest capabilities element-buffer element-offset]}]
 
   (use-shader! gl shader :uniforms uniforms :attributes attributes :textures textures)
 
-  (doseq [[capability enabled?] (merge default-capabilities capabilities)]
+  (doseq [[capability enabled?] capabilities]
     (set-capability! gl capability enabled?))
 
-  (when blending?
-    (set-capability! gl blend true)
+  (when (and blend-src blend-dest)
     (blend-func! gl blend-src blend-dest))
 
   (if (nil? element-buffer)
