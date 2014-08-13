@@ -19,4 +19,6 @@
                                         :output-dir "examples/js"
                                         :optimizations :none
                                         :pretty-print true
-                                        :source-map "examples/js/cljs.js.map"}}}})
+                                        :source-map "examples/js/cljs.js.map"}}}}
+  :codox {:language :clojurescript
+          :exclude clojure.string})
