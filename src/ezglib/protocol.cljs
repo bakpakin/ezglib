@@ -26,9 +26,6 @@
 
 ;;;;; 3D
 
-(defprotocol I3D
-  (-matrix [this]))
-
 (defprotocol IDrawable
   (-draw! [this] "Types that implement -draw should assume
           that the shader and projection matrix have

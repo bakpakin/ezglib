@@ -2,6 +2,81 @@
   (:require [clojure.string :as string]
             [ezglib.protocol :as p]))
 
+;;;;; TRIG
+
+(def deg-to-rad (/ (.-PI js/Math) 180))
+(def rad-to-deg (/ 180 (.-PI js/Math)))
+
+(defn sin
+  "Returns sine of an angle in radians."
+  [rad]
+  (.sin js/Math rad))
+
+(defn sin*
+  "Returns sine of an angle in degrees."
+  [theta]
+  (.sin js/Math (* deg-to-rad theta)))
+
+(defn cos
+  "Returns cosine of an angle in radians."
+  [rad]
+  (.cos js/Math rad))
+
+(defn cos*
+  "Returns cosine of an angle in degrees."
+  [theta]
+  (.cos js/Math (* deg-to-rad theta)))
+
+(defn tan
+  "Returns tangent of an angle in radians."
+  [rad]
+  (.tan js/Math rad))
+
+(defn tan*
+  "Returns tangent of an angle in degrees."
+  [theta]
+  (.tan js/Math (* deg-to-rad theta)))
+
+(defn asin
+  "Returns arcsin in radians."
+  [x]
+  (.asin js/Math x))
+
+(defn asin*
+  "Returns arcsine in degrees."
+  [x]
+  (* rad-to-deg (.asin js/Math x)))
+
+(defn acos
+  "Returns arccosine in radians."
+  [x]
+  (.acos js/Math x))
+
+(defn acos*
+  "Returns arccosine in degrees."
+  [x]
+  (* rad-to-deg (.acos js/Math x)))
+
+(defn atan
+  "Returns arctangent in radians."
+  [x]
+  (.atan js/Math x))
+
+(defn atan*
+  "Returns arctangent in degrees."
+  [x]
+  (* rad-to-deg (.atan js/Math x)))
+
+(defn atan2
+  "Returns arctangent of y / x in radians - x can be 0."
+  [y x]
+  (.atan2 js/Math y x))
+
+(defn atan2*
+  "Returns arctangent of y / x in degrees - x can be 0."
+  [y x]
+  (* rad-to-deg (.atan2 js/Math y x)))
+
 ;;;;; DEFTYPE
 
 (deftype Matrix ^:no-doc [elements rows cols ^:mutable ta]
@@ -290,8 +365,6 @@
   (Matrix. (apply mapv vector (.-elements matrix)) (.-cols matrix) (.-rows matrix) nil))
 
 ;;;; GL UTIL MATRIX FUNCTIONS
-
-(def ^:private ^:no-doc deg-to-rad (/ (.-PI js/Math) 180))
 
 (def m-identity4 ^{:doc "The 4x4 identity matrix."} (m-identity 4))
 
