@@ -1,22 +1,24 @@
 (ns ezglib.example.a
   (:require [ezglib.core :as ez]
-            [ezglib.math :refer [v add sin*]]))
+            [ezglib.util :as util :refer [log]]
+            [ezglib.math :refer [v add sin* cos* atan2*]]))
 
 (defn hello
   []
   (ez/entity
-   :velocity (v 5 20)
-   :position (v 0 -40)
+   :velocity (v 0 120)
+   :position (v 0 0)
    :drawable (ez/asset :hi)))
 
 (defn set-path!
-  [e]
-  (let [vel (ez/prop e :velocity)
-        vx (.-x vel)
-        vy (.-y vel)
+  [game e]
+  (let [[vx vy] (ez/prop e :velocity)
+        [px py] (ez/prop e :position)
+        [mx my] (ez/mouse-pos game)
         l2 (+ (* vx vx) (* vy vy))
-        l (.sqrt js/Math l2)]
-    (ez/set-prop! e :velocity (v (* l (sin* 90)) 0))))
+        l (.sqrt js/Math l2)
+        d (atan2* (- my py) (- mx px))]
+    (ez/set-prop! e :velocity (v (* l (cos* d)) (* l (sin* d))))))
 
 (defn start-state
   [game]
@@ -28,7 +30,7 @@
            h)]
     (ez/state game
               :world w
-              :handlers {:click #(set-path! h)}
+              :handlers {:mouse-down #(set-path! game h)}
               :key-press {:space #(ez/play! (ez/asset :beep))})))
 
 (let [game (ez/game 600 600)]

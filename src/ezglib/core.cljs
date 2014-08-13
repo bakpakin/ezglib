@@ -920,6 +920,8 @@
 ;;;;; MOUSE
 
 (def ^:private ^:no-doc mouse-position (atom [0 0]))
+(def ^:private ^:no-doc mouse-down (to-array (repeat 30 0)))
+(def ^:private ^:no-doc mouse-down-count (atom 0))
 
 (defn mouse-global-pos
   "Gets the global mouse position in the browser. Not recommended for most use."
@@ -944,17 +946,47 @@
   [game]
   ((mouse-pos game) 1))
 
+(defn mouse-down?
+  "Checks if the mouse button is down. 1 is the left button, 2 is the middle, 3 is the right."
+  ([button]
+   (< 0 (aget mouse-down button)))
+  ([]
+   (< 0 @mouse-down-count)))
+
 ;;;;; GLOBAL MOUSE SETUP
 
-(.addEventListener js/window "mousemove" (fn [e]
+(.addEventListener js/window "mousemove" (fn [ev]
                                            (reset!
                                             mouse-position
-                                            [(.-clientX e) (.-clientY e)])))
+                                            [(.-clientX ev) (.-clientY ev)])))
 
-(defn ^:no-doc init!
+(.addEventListener js/window "mouseup" (fn [ev]
+                                         (aset
+                                          mouse-down
+                                          (.-which ev)
+                                          (dec (aget mouse-down (.-button ev))))
+                                         (swap! mouse-down-count dec)))
+
+(.addEventListener js/window "mousedown" (fn [ev]
+                                         (aset
+                                          mouse-down
+                                          (.-which ev)
+                                          (inc (aget mouse-down (.-button ev))))
+                                         (swap! mouse-down-count inc)))
+
+(defn ^:private ^:no-doc enque-mouse!
+  "Enques mouse events to the game"
+  [game]
+  (when (mouse-down?)
+    (enqueue-event! game :mouse-down))
+  (dotimes [i 9]
+    (when (mouse-down? i)
+      (enqueue-event! game (case (aget mouse-down i) 1 :left-mouse-down 2 :middle-mouse-down 3 :right-mouse-down [:mouse-down i])))))
+
+(defn ^:private ^:no-doc init!
   "Initializes the input."
   [game]
-  (aset (:canvas game) "onclick" (fn [ev] (enqueue-event! game :click ev))))
+  (.addEventListener (:canvas game) "click" (fn [ev] (enqueue-event! game :click ev))))
 
 ;;;;; GAME FUNCTIONS
 
@@ -1032,6 +1064,7 @@
      (when @(:loop game) (callback-caller cb))
      (let [m (@(:states game) @(:state game))]
        (enqueue-keys! game)
+       (enque-mouse! game)
        (update-time game)
        (if (:update m) ((:update m)))
        (if (:world m) (update! (:world m)))
