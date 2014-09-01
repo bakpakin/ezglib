@@ -316,14 +316,31 @@
 
 ;;;;; CAMERAS
 
-(deftype ^{:no-doc true} Camera2D [x y hw hh angle pos matrix]
+(deftype ^{:no-doc true} Camera2D [x y hw hh angle matrix]
   p/ITypedArray
   (-typed-array [_] (p/-typed-array matrix)))
+
+(deftype ^{:no-doc true} MutableCamera2D [^:mutable x
+                                          ^:mutable y
+                                          ^:mutable hw
+                                          ^:mutable hh
+                                          ^:mutable angle]
+  p/ITypedArray
+  (-typed-array [_] (p/-typed-array
+                     (m/mult
+                      (m/m-ortho (- x hw) (+ x hw) (+ y hh) (- y hh) -1000000 1000000)
+                      (m/m-rotate-z angle)))))
 
 (defn camera-2d
   "Constructs a 2D camera."
   ([x y hw hh]
-   (camera-2d x y hw hh 0))
+   (Camera2D.
+    x
+    y
+    hw
+    hh
+    0
+    (m/m-ortho (- x hw) (+ x hw) (+ y hh) (- y hh) -1000000 1000000)))
   ([x y hw hh angle]
    (Camera2D.
     x
@@ -331,10 +348,21 @@
     hw
     hh
     angle
-    (m/Vec3. x y 0 nil)
     (m/mult
-     (m/ortho (- x hw) (+ x hw) (- y hh) (+ y hh) -1000000 1000000)
-     (m/rotate-z angle)))))
+     (m/m-ortho (- x hw) (+ x hw) (+ y hh) (- y hh) -1000000 1000000)
+     (m/m-rotate-z angle)))))
+
+(defn camera-2d!
+  "Constructs a mutable 2D camera."
+  ([x y hw hh]
+   (camera-2d! x y hw hh 0))
+  ([x y hw hh angle]
+   (MutableCamera2D.
+    x
+    y
+    hw
+    hh
+    angle)))
 
 ;;;;; SPRITE
 
@@ -1109,8 +1137,10 @@
   of entities."
   ([game & {:keys [shader camera color]}]
    (let [gl (:gl game)
+         hw (/ (:width game) 2)
+         hh (/ (:height game) 2)
          shader (or shader (texture-shader gl) )
-         camera (or camera (m/m-ortho 0 (:width game) (:height game) 0 -1000000 1000000))
+         camera (or camera (camera-2d hw hh hw hh)) 
          color (or color (m/v 1 1 1 1))]
      (system
       (matcher [:drawable])

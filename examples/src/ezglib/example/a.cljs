@@ -6,12 +6,16 @@
 (defn hello
   []
   (ez/entity
+   :position (v 0 0)
+   :velocity (v 10 10)
    :drawable (ez/asset :hi)))
 
 (defn start-state
   [game]
   (let [h (hello)
         w (ez/world
+           (ez/movement-system game)
+           (ez/transform2d-system game)
            (ez/render-system game)
            h)]
     (ez/state game
