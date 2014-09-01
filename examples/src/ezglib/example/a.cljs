@@ -7,7 +7,7 @@
   []
   (ez/entity
    :position (v 0 0)
-   :velocity (v 10 10)
+   :velocity (v 4 20)
    :drawable (ez/asset :hi)))
 
 (defn start-state
@@ -24,8 +24,8 @@
 
 (let [game (ez/game 400 400)]
   (ez/load! game
-            :assets [[:sound :beep "assets/beep.wav"]
-                     [:text :hi "Arial" 60 "Hello World!"]]
+            :assets {:beep [:sound "assets/beep.wav"]
+                     :hi [:text "Arial" 60 "Hello World!"]}
             :on-load (fn []
                        (ez/add-state! game :start (start-state game))
                        (ez/set-state! game :start)

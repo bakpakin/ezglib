@@ -33,7 +33,7 @@
 
 (defn- ^:no-doc make-handles
   [game args]
-  (let [f (fn [[atype id & args]]
+  (let [f (fn [[id [atype & args]]]
             (let [h (apply (@loaders atype) game args)
                   isdn (@is-dones atype)
                   akey (vec args)
@@ -51,11 +51,11 @@
   load! requires an instance of game (created via ezglib.core/game),
   and takes variadic arguments in map form.
 
-  :assets - a vector of vectors representing the assets to load.
-  Should take the form [[:asset-type new-asset-id & loading-arguments]].
+  :assets - a map of asset-ids to  vectors representing the assets to load.
+  Should take the form {:id [:asset-type & loading-arguments]}.
   For example, (load! game
-  :assets [[:sound :beep \"assets/beep.wav\"]
-  [:sound :click \"assets/click.wav\"]])
+  :assets {:beep [:sound \"assets/beep.wav\"]
+           :click [:sound \"assets/click.wav\"]})
   will load two sounds and store them as assets named :click and :beep.
 
   :asset-group (optional) - the asset group to load the asset into. Asset groups
@@ -67,7 +67,7 @@
   :on-load (optional) - a callback function that is called when loading is finished."
   ([game & args]
    (let [mp (apply hash-map args)
-         type-id-args (or (mp :assets) [])
+         type-id-args (or (mp :assets) {})
          on-load (or (mp :on-load) (fn [] nil))
          asset-group (or (mp :asset-group) default-group)
          update (or (mp :update) (fn [p] nil))
