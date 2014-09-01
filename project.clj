@@ -1,4 +1,4 @@
-(defproject ezglib "0.0.0-SNAPSHOT"
+(defproject ezglib "0.1.7"
   :description "Make WebGL games in ClojureScript."
   :url "https://github.com/bakpakin/ezglib"
   :dependencies [[tailrecursion/cljs-priority-map "1.1.0"]]
