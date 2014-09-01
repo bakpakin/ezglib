@@ -33,7 +33,7 @@
 
 (defn- ^:no-doc make-handles
   [game args]
-  (let [f (fn [[atype id & args]]
+  (let [f (fn [[id [atype & args]]]
             (let [h (apply (@loaders atype) game args)
                   isdn (@is-dones atype)
                   akey (vec args)
@@ -51,11 +51,11 @@
   load! requires an instance of game (created via ezglib.core/game),
   and takes variadic arguments in map form.
 
-  :assets - a vector of vectors representing the assets to load.
-  Should take the form [[:asset-type new-asset-id & loading-arguments]].
+  :assets - a map of asset-ids to  vectors representing the assets to load.
+  Should take the form {:id [:asset-type & loading-arguments]}.
   For example, (load! game
-  :assets [[:sound :beep \"assets/beep.wav\"]
-  [:sound :click \"assets/click.wav\"]])
+  :assets {:beep [:sound \"assets/beep.wav\"]
+           :click [:sound \"assets/click.wav\"]})
   will load two sounds and store them as assets named :click and :beep.
 
   :asset-group (optional) - the asset group to load the asset into. Asset groups
@@ -67,7 +67,7 @@
   :on-load (optional) - a callback function that is called when loading is finished."
   ([game & args]
    (let [mp (apply hash-map args)
-         type-id-args (or (mp :assets) [])
+         type-id-args (or (mp :assets) {})
          on-load (or (mp :on-load) (fn [] nil))
          asset-group (or (mp :asset-group) default-group)
          update (or (mp :update) (fn [p] nil))
@@ -316,14 +316,31 @@
 
 ;;;;; CAMERAS
 
-(deftype ^{:no-doc true} Camera2D [x y hw hh angle pos matrix]
+(deftype ^{:no-doc true} Camera2D [x y hw hh angle matrix]
   p/ITypedArray
   (-typed-array [_] (p/-typed-array matrix)))
+
+(deftype ^{:no-doc true} MutableCamera2D [^:mutable x
+                                          ^:mutable y
+                                          ^:mutable hw
+                                          ^:mutable hh
+                                          ^:mutable angle]
+  p/ITypedArray
+  (-typed-array [_] (p/-typed-array
+                     (m/mult
+                      (m/m-ortho (- x hw) (+ x hw) (+ y hh) (- y hh) -1000000 1000000)
+                      (m/m-rotate-z angle)))))
 
 (defn camera-2d
   "Constructs a 2D camera."
   ([x y hw hh]
-   (camera-2d x y hw hh 0))
+   (Camera2D.
+    x
+    y
+    hw
+    hh
+    0
+    (m/m-ortho (- x hw) (+ x hw) (+ y hh) (- y hh) -1000000 1000000)))
   ([x y hw hh angle]
    (Camera2D.
     x
@@ -331,10 +348,21 @@
     hw
     hh
     angle
-    (m/Vec3. x y 0 nil)
     (m/mult
-     (m/ortho (- x hw) (+ x hw) (- y hh) (+ y hh) -1000000 1000000)
-     (m/rotate-z angle)))))
+     (m/m-ortho (- x hw) (+ x hw) (+ y hh) (- y hh) -1000000 1000000)
+     (m/m-rotate-z angle)))))
+
+(defn camera-2d!
+  "Constructs a mutable 2D camera."
+  ([x y hw hh]
+   (camera-2d! x y hw hh 0))
+  ([x y hw hh angle]
+   (MutableCamera2D.
+    x
+    y
+    hw
+    hh
+    angle)))
 
 ;;;;; SPRITE
 
@@ -1109,8 +1137,10 @@
   of entities."
   ([game & {:keys [shader camera color]}]
    (let [gl (:gl game)
+         hw (/ (:width game) 2)
+         hh (/ (:height game) 2)
          shader (or shader (texture-shader gl) )
-         camera (or camera (m/m-ortho 0 (:width game) (:height game) 0 -1000000 1000000))
+         camera (or camera (camera-2d hw hh hw hh)) 
          color (or color (m/v 1 1 1 1))]
      (system
       (matcher [:drawable])
